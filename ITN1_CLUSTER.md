@@ -55,6 +55,8 @@
         - [snapshot](#snapshot)
         - [continuous output](#continuous-output)
       - [available commands](#available-commands)
+    - [Contribution](#contribution)
+    - [Scripts License](#scripts-license)
   - [Monitor Your System](#monitor-your-system)
     - [Install Monitoring](#install-monitoring)
     - [Prometheus](#prometheus)
@@ -1155,6 +1157,14 @@ Usage: 'itn1_cluster command [options]'
         --fragments-count                       int1                                show the fragmented_id count from 'int1' node logs
         --fragment-status                       int1 <fragment_id>                  check a fragment_id/transaction status from 'int1' node logs
 ```
+
+### Contribution ###
+
+If you have suggestions on how to improve these scripts, please [file an issue](https://github.com/gacallea/itn1_cluster/issues) on Github. Constructive feedback welcomed.
+
+### Scripts License ###
+
+Both ```itn1_cluster``` and the ```itn1_helpers``` scripts are licensed under the terms of the [GPLv3](itn1_cluster/LICENSE) license.
 
 ## Monitor Your System ##
 
