@@ -210,7 +210,7 @@ Edit ```/root/itn1_cluster_repo/itn1_cluster/scripts/itn1_config``` with your fa
 2. ```POOL_TICKER```: the pool ticker as registered on the Cardano Foundation Registry.
 3. ```ITN1_PUBLIC_IP_ADDR```: the server public IP address, associated with your pool in the network.
 4. ```MY_POOL_ID```: the pool ID as on the Shelley explorer. E.g: [INSL](https://shelleyexplorer.cardano.org/en/stake-pool/93756c507946c4d33d582a2182e6776918233fd622193d4875e96dd5795a348c/). **Your ```HASH``` value would be it.**
-5. ```MY_USER_ID```: the user ID from our Pooltool [account profile](https://pooltool.io/profile).
+5. ```MY_USER_ID```: the user ID from our Pooltool [account profile](https://pooltool.io/profile). **Your API ID would be it.**
 
 **IMPORTANT: create a Pooltool account now if you don't have it, claim your pool on Pooltool, and fill the above variables. Once you have configured the above, you can proceed with the guide.**
 
