@@ -1010,7 +1010,7 @@ This amazing feature was created by Michael at [VIBE](https://pooltool.io/pool/a
 
 The ```itn1_cluster``` script comes with a number of useful commands for pool operators. It has all sort of checks, stats, and more commands, to help you manage your node. As said earlier, it is the Swiss Army Knife for your pool management.
 
-**IMPORTANT**: ```itn1_cluster``` needs to always be run against a **running** node. For example:
+**IMPORTANT**: ```itn1_cluster``` needs to always be run against a **running** node. **Example for node 1**:
 
 ```text
 ./itn1_cluster --node-stats 1
@@ -1057,7 +1057,9 @@ To get a bird-eye overview, the script offers ```--snapshot```; this will show t
 
 ##### continuous output #####
 
-Some of the ```itn1_cluster``` commands are best experienced when they run continuously. For example, ```--snapshot``` is best run in a ```tmux``` panel to keep you constantly informed about a number of statistics. To achieve that, prepend them with ```watch```:
+Some of the ```itn1_cluster``` commands are best experienced when they run continuously. For example, ```--snapshot``` is best run in a ```tmux``` panel to keep you constantly informed about a number of statistics. To achieve that, prepend them with ```watch```.
+
+**Example for node 1:**
 
 ```text
 watch -c './itn1_cluster --snapshot 1 | ccze -A'
@@ -1067,7 +1069,7 @@ watch ```-c``` option is to format the output for ANSI color. Pipe that to ```cc
 
 You can continuously run **any** ```itn1_cluster``` command (or any system command for that matter), but **do not abuse this functionality, as it could tax your REST API to the point of crashing your node**.
 
-Some more example commands to use such methods are listed below.
+Some more example commands to use such methods are listed below. **Example for node 1:**
 
 ```text
 watch -n5 './itn1_cluster --date-stats 1 5000 30'
