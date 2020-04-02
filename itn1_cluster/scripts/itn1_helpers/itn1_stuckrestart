@@ -63,6 +63,7 @@ for ((i = 0; i < "$ITN1_NODES_COUNT"; i++)); do
         ## let's trigger the failover in case the leader restarted...
         sleep 15
         bash /root/itn1_helpers/itn1_failover
+        continue
     fi
 
     ## if we reach this point, the node as running and we've got valid variables assignments to compare to
