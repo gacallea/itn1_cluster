@@ -13,7 +13,7 @@
 COMMON_DATE=$(date +%F-%H%M%S)
 
 ## populate the array with N nodes as needed in the TARGET file
-for (( i = 1; i <= "$ITN1_NODES_COUNT"; i++ )); do
+for ((i = 1; i <= "$ITN1_NODES_COUNT"; i++)); do
     NODE_DIR="${ITN1_MAIN_DIR}/itn1_node_$i"
     NODE_STORAGE_DIR="${NODE_DIR}/storage"
     NODE_STORAGE_FILE="${NODE_STORAGE_DIR}/blocks.sqlite"
@@ -33,4 +33,3 @@ for (( i = 1; i <= "$ITN1_NODES_COUNT"; i++ )); do
     ## remove backups older than 24h
     find "$NODE_BACKUP_DIR" -type f -mtime +0 -exec rm -f '{}' \;
 done
-
