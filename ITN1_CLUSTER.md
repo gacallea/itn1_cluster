@@ -994,7 +994,7 @@ The script will check the system cache usage and intervene with a forced sync af
 
 #### itn1-sendmytip ####
 
-**IMPORTANT: this requires a Pooltool account and user ID.**
+**IMPORTANT: this requires a Pooltool account and user ID. Make sure you configure [itn1 config](#itn1-config) as well.**
 
 What does it do? Essentially, ```itn1_sendmytip``` sends your pool tip statistics every minute to Pooltool. This data, send by as many pools as possible, is used by Pooltool to inform us all (on the site) of the latest height and make statistics about the whole network health.
 
@@ -1002,7 +1002,7 @@ The ```itn1_sendmytip``` is exactly as the Pooltool's repo version, and it is pr
 
 #### itn1-sendslots ####
 
-**IMPORTANT: this requires a Pooltool account and user ID.**
+**IMPORTANT: this requires a Pooltool account and user ID. Make sure you configure [itn1 config](#itn1-config) as well.**
 
 This amazing feature was created by Michael at [VIBE](https://pooltool.io/pool/ad67bc523e646aa4acce69c921d47092cb89461f2c6f1252fe6576c280aaa6a8/), and it will provide your scheduled and minted blocks count to Pooltool, for statistics and the 100% stars we all love to obtain each epoch. The original version work with a single node/instance. The hereby provided version, was adapted to work with ```ITN1 Cluster```, and it's kept up to date.
 
