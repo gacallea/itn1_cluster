@@ -1,0 +1,290 @@
+#!/bin/bash
+
+##### EDIT VARIABLES IN 'itn1_config' #####
+##### EDIT VARIABLES IN 'itn1_config' #####
+##### EDIT VARIABLES IN 'itn1_config' #####
+
+## source the custom variables
+# shellcheck source=./itn1_config
+. ./itn1_config
+
+## script name to be used in commands examples
+SCRIPTNAME="${0##*/}"
+
+## SOURCE ALL FUNCTIONS FILES
+# shellcheck source=./itn1_funcs/
+for func in ./itn1_funcs/*.bash; do . "$func"; done
+
+## main ##
+while true; do
+    case "$1" in
+    '')
+        echo -e "\\n$SCRIPTNAME: no command supplied. run '$SCRIPTNAME --help' for a complete list of commands and options\\n"
+        exit 0
+        ;;
+    -h | --help)
+        usage
+        exit 0
+        ;;
+    --start-cluster)
+        itn1ClusterStart
+        exit 0
+        ;;
+    --stop-cluster)
+        itn1ClusterStop
+        exit 0
+        ;;
+    --restart-cluster)
+        itn1ClusterREStart
+        exit 0
+        ;;
+    --status-cluster)
+        itn1ClusterStatus
+        exit 0
+        ;;
+    --enable-cluster)
+        itn1ClusterEnable
+        exit 0
+        ;;
+    --disable-cluster)
+        itn1ClusterDisable
+        exit 0
+        ;;
+    --start-node)
+        shift
+        itn1NodeStart "$1"
+        exit 0
+        ;;
+    --stop-node)
+        shift
+        itn1NodeStop "$1"
+        exit 0
+        ;;
+    --restart-node)
+        shift
+        itn1NodeREStart "$1"
+        exit 0
+        ;;
+    --status-node)
+        shift
+        itn1NodeStatus "$1"
+        exit 0
+        ;;
+    --settings)
+        shift
+        itn1Settings "$1"
+        exit 0
+        ;;
+    --get-leader)
+        shift
+        itn1GetLeader "$1"
+        exit 0
+        ;;
+    --promote-leader)
+        shift
+        itn1PromoteLeader "$1" "$2"
+        exit 0
+        ;;
+    --demote-leader)
+        shift
+        itn1DemoteLeader "$1" "$2"
+        exit 0
+        ;;
+    --swap-leader)
+        itn1SwapLeader
+        exit 0
+        ;;
+    --account-balance)
+        shift
+        itn1AccountBalance "$1"
+        exit 0
+        ;;
+    --current-stakes)
+        shift
+        itn1CurrentStakes "$1"
+        exit 0
+        ;;
+    --live-stakes)
+        shift
+        itn1LiveStake "$1"
+        exit 0
+        ;;
+    --epoch-stakes)
+        shift
+        itn1EpochStakes "$1" "$2"
+        exit 0
+        ;;
+    --epoch-rewards)
+        shift
+        itn1OneEpochRewards "$1" "$2"
+        exit 0
+        ;;
+    --rewards-balance)
+        shift
+        itn1RewardsBalance "$1"
+        exit 0
+        ;;
+    --rewards-history)
+        shift
+        itn1RewardsHistory "$1" "$2"
+        exit 0
+        ;;
+    --leader-logs)
+        shift
+        itn1LeaderLogs "$1"
+        exit 0
+        ;;
+    --scheduled-slots)
+        shift
+        itn1HowManySlots "$1"
+        exit 0
+        ;;
+    --scheduled-dates)
+        shift
+        itn1ScheduleDates "$1"
+        exit 0
+        ;;
+    --scheduled-times)
+        shift
+        itn1ScheduleTime "$1"
+        exit 0
+        ;;
+    --scheduled-next)
+        shift
+        itn1NextScheduledBlock "$1"
+        exit 0
+        ;;
+    --live-logs)
+        shift
+        itn1LiveLogs "$1"
+        exit 0
+        ;;
+    --last-logs)
+        shift
+        itn1LastLogs "$1" "$2"
+        exit 0
+        ;;
+    --problems)
+        shift
+        itn1ProblemsInLogs "$1" "$2"
+        exit 0
+        ;;
+    --issues)
+        shift
+        itn1IssuesInLogs "$1" "$2"
+        exit 0
+        ;;
+    --snapshot)
+        shift
+        itn1CurrentStatus "$1"
+        exit 0
+        ;;
+    --bstrap-time)
+        shift
+        itn1BootstrapTime "$1"
+        exit 0
+        ;;
+    --last)
+        shift
+        itn1LastStart "$1"
+        exit 0
+        ;;
+    --node-stats)
+        shift
+        itn1NodeStats "$1"
+        exit 0
+        ;;
+    --pool-stats)
+        shift
+        itn1PoolStats "$1"
+        exit 0
+        ;;
+    --net-stats)
+        shift
+        itn1NetStats "$1"
+        exit 0
+        ;;
+    --sys-stats)
+        shift
+        itn1ResourcesStat "$1"
+        exit 0
+        ;;
+    --date-stats)
+        shift
+        itn1LastDates "$1" "$2"
+        exit 0
+        ;;
+    --current-tip)
+        shift
+        itn1GetCurrentTip "$1"
+        exit 0
+        ;;
+    --next-epoch)
+        shift
+        nextEpoch
+        exit 0
+        ;;
+    --block-now)
+        shift
+        currentBlockDate
+        exit 0
+        ;;
+    --block-delta)
+        shift
+        itn1blocksDelta "$1"
+        exit 0
+        ;;
+    --block-valid)
+        shift
+        itn1IsBlockValid "$1" "$2"
+        exit 0
+        ;;
+    --check-peers)
+        shift
+        itn1CheckPeers "$1"
+        exit 0
+        ;;
+    --connected-ips)
+        shift
+        itn1ConnectedIps "$1" "$2"
+        exit 0
+        ;;
+    --is-quarantined)
+        shift
+        itn1IsPoolQuarantined "$1"
+        exit 0
+        ;;
+    --quarantined-ips)
+        shift
+        itn1QuarantinedIps "$1"
+        exit 0
+        ;;
+    --quarantined-ips-count)
+        shift
+        itn1NOfQuarantinedIps "$1"
+        exit 0
+        ;;
+    --fragments)
+        shift
+        itn1FragmentsIds "$1"
+        exit 0
+        ;;
+    --fragments-count)
+        shift
+        itn1FragmentIdCount "$1"
+        exit 0
+        ;;
+    --fragment-status)
+        shift
+        itn1FragmentStatus "$1" "$2"
+        exit
+        ;;
+    *)
+        echo -e "\\n$SCRIPTNAME: unknown command '$1'\\n"
+        exit 127
+        ;;
+    esac
+done
+
+### THIS SHOULD NEVER BE REACHED ###
+exit 255

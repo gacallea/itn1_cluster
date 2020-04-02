@@ -1,0 +1,243 @@
+#!/bin/bash
+
+## source: https://github.com/gacallea/itn1_cluster
+## put the script in '/root/itn1_helpers/itn1_failover'
+## put this in root's crontab (crontab -e):
+## * * * * * /root/itn1_helpers/itn1_failover
+
+## in a gist this script does:
+## is node running? no  ==> next please
+## is node running? yes ==> is epoch change approaching? (no matter if scheduled or not)                   ==> promote exactly 1 leader for ALL available leader candidates nodes (unless it has a leader already)
+## is node running? yes ==> is pool scheduled? no?  ==> right after epoch change or any other epoch date?  ==> demote ALL leaders from ALL available leader candidates nodes
+## is node running? yes ==> is pool scheduled? yes?                                                        ==> promote best leader node and demote ALL OTHERS <== based on: lastBlockHeight; peerConnectedCnt;
+
+## TODO:
+## NOT IMPLEMENTED YET -- is node running? yes ==> is pool scheduled? yes? ==> are we close to scheduled_at_time? no?             ==> promote best leader node and demote ALL OTHERS <== based on: lastBlockHeight; peerConnectedCnt;
+## NOT IMPLEMENTED YET -- is node running? yes ==> is pool scheduled? yes? ==> are we close to scheduled_at_time? yes?            ==> leave leader where it's at, just in case...
+
+## source the custom variables
+. /root/itn1_config
+
+#### SET THE DESIRED THRESHOLDS HERE
+slotsToEpochDelta="30" ## checked against for epoch proximitiy for promote/demote ALL leaders if there are NO scheduled blocks
+#secondsToSchedule="10" ## checked against schedule_at_time to avoid leader swap before N seconds of a block schedule
+#secondsPostSchedule="10" ## checked against schedule_at_time to avoid leader swap for the next N seconds after a block schedule
+
+#######################################################################################################################################
+
+### DO NOT EDIT PAST THIS POINT ### ## DO NOT CHANGE ### DO NOT EDIT PAST THIS POINT ### ## DO NOT CHANGE #### ## #
+### DO NOT EDIT PAST THIS POINT ### ## DO NOT CHANGE ### DO NOT EDIT PAST THIS POINT ### ## DO NOT CHANGE #### ## #
+
+## temporary file
+tmpFile=$(mktemp)
+
+## declare empty arrays for later
+declare -a nodeRestPortArray
+declare -a demoteRestPortArray
+declare -a lastBlockHeightArray
+declare -a peerConnectedCntArray
+
+## time and date calculations
+chainstartdate=1576264417
+elapsed=$((($(date +%s) - chainstartdate)))
+epoch=$(((elapsed / 86400)))
+slot=$(((elapsed % 86400) / 2))
+nowBlockDate="$epoch.$slot"
+slotsToEpoch="$((43200 - slot))"
+
+## needed later
+runThisOne="false"
+
+## loop over all nodes
+for ((i = 0; i < "$ITN1_NODES_COUNT"; i++)); do
+    ITN1_NODE_NUM="$((i + 1))"
+    NODE_REST_API_PORT="${ITN1_REST_API_PORT[i]}"
+    NODE_REST_API_URL="http://127.0.0.1:$NODE_REST_API_PORT/api"
+    NODE_DIR="${ITN1_MAIN_DIR}/itn1_node_$ITN1_NODE_NUM"
+    NODE_SECRET="itn1_node_${ITN1_NODE_NUM}_secret.yaml"
+
+    ## query each node for status
+    nodeStatus=$($JCLI rest v0 node stats get -h "$NODE_REST_API_URL" | awk '/state/ {print $2}')
+
+    ## if the node is running...
+    if [ "$nodeStatus" == "Running" ]; then
+        ## is pool scheduled and does it have assgined slots?
+        howManyAssignedSlots=$($JCLI rest v0 leaders logs get -h "$NODE_REST_API_URL" | grep -c created_at_time)
+    elif [ "$nodeStatus" == "Bootstrapping" ]; then
+        echo "the node ITN1_NODE_$ITN1_NODE_NUM is Bootstrapping, exiting the routine"
+        continue
+    else
+        echo "ERROR: THE NODE ITN1_NODE_$ITN1_NODE_NUM IS NOT RUNNING, exiting the routine"
+        continue
+    fi
+
+    ## IF WE REACH THIS POINT, THE NODE IS RUNNING AND WE'VE GOT VALID VARIABLES AND CAN PROCEED WITH:
+
+    ## IF IT DOESN'T HAVE ANY ASSIGNED SLOT
+    if [ "$howManyAssignedSlots" -eq "0" ]; then
+        ## ARE WE CLOSE TO EPOCH CHANGE?
+        if [ "$slotsToEpoch" -le "$slotsToEpochDelta" ]; then
+            ## PROMOTE ALL
+            ## does it have a leader already?
+            hasLeaders=$($JCLI rest v0 leaders get -h "$NODE_REST_API_URL" | grep -v -e "^\\---" -e "^\\[" -c)
+            ## if it does, let's skip ahead, we don't want multiple leaders...
+            if [ "$hasLeaders" -ge "1" ]; then
+                echo "ITN1_NODE_$ITN1_NODE_NUM has a leader already"
+                continue
+            ## if it doesn't have a leader already, promote a leader for the node
+            else
+                echo -n "ADDING a new leader to ITN1_NODE_$ITN1_NODE_NUM with ID ==> "
+                "$JCLI" rest v0 leaders post -f "$NODE_DIR"/"$NODE_SECRET" -h "$NODE_REST_API_URL"
+            fi
+        else
+            ## if we: 1) are not approaching epoch change; 2) are in any other slot; or 3) are above the proximity threshold
+            ## DEMOTE ALL
+            ## does it have at least a leader?
+            hasLeaders=$($JCLI rest v0 leaders get -h "$NODE_REST_API_URL" | grep -v -e "^\\---" -e "^\\[" -c)
+            ## if it does, iterate over the node to demote each leader
+            if [ "$hasLeaders" -ge "1" ]; then
+                for ((l = 1; l <= "$hasLeaders"; l++)); do
+                    leaderID="$l"
+                    ## demote node from leader candidate
+                    echo "REMOVING <leaderId> ==> $leaderID <== from ITN1_NODE_$ITN1_NODE_NUM"
+                    "$JCLI" rest v0 leaders delete "$leaderID" -h "$NODE_REST_API_URL"
+                done
+            ## otherwise let's just log that there was no leader to demote
+            else
+                echo "ITN1_NODE_$ITN1_NODE_NUM does not have any leader to demote"
+            fi
+        fi
+    ## IF THE POOL IS SCHEDULED, WITH AT LEAST AN ASIGNED BLOCK
+    else
+        ## ARE WE CLOSE TO EPOCH CHANGE?
+        if [ "$slotsToEpoch" -le "$slotsToEpochDelta" ]; then
+            ## PROMOTE ALL
+            ## does it have a leader already?
+            hasLeaders=$($JCLI rest v0 leaders get -h "$NODE_REST_API_URL" | grep -v -e "^\\---" -e "^\\[" -c)
+            ## if it does, let's skip ahead, we don't want multiple leaders...
+            if [ "$hasLeaders" -ge "1" ]; then
+                echo "ITN1_NODE_$ITN1_NODE_NUM has a leader already"
+                continue
+            ## if it doesn't have a leader already, promote a leader for the node
+            else
+                echo -n "ADDING a new leader to ITN1_NODE_$ITN1_NODE_NUM with ID ==> "
+                "$JCLI" rest v0 leaders post -f "$NODE_DIR"/"$NODE_SECRET" -h "$NODE_REST_API_URL"
+            fi
+        else
+            ## let's get the node stats in the temp file
+            $JCLI rest v0 node stats get -h "$NODE_REST_API_URL" --output-format json >"$tmpFile"
+            ## we need to make sure about the rest ports.....
+            nodeRestPortArray[++r]=${ITN1_REST_API_PORT[i]}
+            ## get the parameters to pick the leader, highest to be node for swap
+            lastBlockHeightArray[++a]=$(jq -r .lastBlockHeight "$tmpFile")
+            peerConnectedCntArray[++p]=$(jq -r .peerConnectedCnt "$tmpFile")
+
+            runThisOne="true"
+            ## are we close to the scheduled block?
+            #scheduleDateToTest=$($JCLI rest v0 leaders logs get -h "$NODE_REST_API_URL" | awk '/scheduled_at_time/ {print $2}' | sed 's/"//g' | sort -g | head -1)
+            #secondsToBlock=$(dateutils.ddiff now "$scheduleDateToTest" -f "%S")
+            #if [[ "$secondsToBlock" -le "$secondsToSchedule" ]]; then
+            #    echo "BLOCK SCHEDULE APPROACHING (block in $secondsToBlock seconds), EXITING THE ROUTINE"
+            #    echo
+            #    exit 55
+            #fi
+
+            ### are we in the N seconds post block time? let's wait to switch leaders, just in case
+            #secondsPostBlock=$(dateutils.dadd "$scheduleDateToTest" +${secondsPostSchedule}s)
+            #dateCalcPostBlock=$(dateutils.ddiff now "$secondsPostBlock" -f "%S")
+            #if [[ "$dateCalcPostBlock" -lt "$secondsPostSchedule" ]]; then
+            #    echo "NOT ENOUGH TIME POST BLOCK SCHEDULE HAS PASSED, EXITING THE ROUTINE"
+            #    echo
+            #    exit 55
+            #fi
+        fi
+    fi
+done
+
+## IF THE POOL IS SCHEDULED, WITH AT LEAST AN ASIGNED BLOCK
+## WE ENTER THE SWAP ROUTINE TO ALWAYS PROMOTE THE BEST LEADER NODE
+## AND DEMOTE ALL OTHERS BASED ON THE ARRAYS WE COLLECTED ABOVE
+if [[ "$runThisOne" == "true" ]]; then
+    if [[ "$howManyAssignedSlots" =~ ^[0-9]+$ ]] && [[ "$howManyAssignedSlots" -ge "1" ]]; then
+        ## ITERATIONS AND ARRAY START FROM 1 TO MATCH NODE COUNT....
+        ## set some default values to later select node...
+        NODE_REST_PORT=${nodeRestPortArray[1]}
+        NODE_HEIGHT=${lastBlockHeightArray[1]}
+        NODE_PEERS=${peerConnectedCntArray[1]}
+
+        echo "$POOL_TICKER" HAS "$howManyAssignedSlots" ASSIGNED SLOTS
+        echo nowBlockDate "$nowBlockDate"
+        echo
+        ## ...by iterating over the actual available rest ports
+        for ((n = 1; n <= ${#nodeRestPortArray[@]}; ++n)); do
+            ## index with the highest lastBlockHeight wins...and sets node to promote
+            ## index with the highest peerConnectedCnt wins...and sets node to promote
+            if [ "${lastBlockHeightArray[$n]}" -gt "$NODE_HEIGHT" ] || [ "${peerConnectedCntArray[$n]}" -gt "$NODE_PEERS" ]; then
+                NODE_HEIGHT="${lastBlockHeightArray[$n]}"
+                NODE_REST_PORT="${nodeRestPortArray[$n]}"
+            fi
+        done
+
+        ## DEMOTE FIRST, TO BE SAFER...
+        ## create demote array with nodeRestPortArray MINUS selected node port
+        for ((q = 1; q <= ${#nodeRestPortArray[@]}; q++)); do
+            if [ "${nodeRestPortArray[$q]}" != "$NODE_REST_PORT" ]; then
+                demoteRestPortArray[++d]="${nodeRestPortArray[$q]}"
+            fi
+        done
+
+        ## iterate over demote array with and demote leaders
+        for ((z = 1; z <= ${#demoteRestPortArray[@]}; z++)); do
+            ## let's set the needed variables
+            DEMOTE_RESTAPI_PORT="${demoteRestPortArray[$z]}"
+            DEMOTE_NODE=${DEMOTE_RESTAPI_PORT:(-1)}
+            DEMOTE_RESTAPI_URL="http://127.0.0.1:$DEMOTE_RESTAPI_PORT/api"
+            ## does it have at least a leader?
+            hasLeaders=$($JCLI rest v0 leaders get -h "$DEMOTE_RESTAPI_URL" | grep -v -e "^\\---" -e "^\\[" -c)
+            ## if it does, iterate over the node to demote each leader
+            if [ "$hasLeaders" -ge "1" ]; then
+                for ((u = 1; u <= "$hasLeaders"; u++)); do
+                    leaderID="$u"
+                    ## demote node from leader candidate
+                    echo "REMOVING <leaderId> ==> $leaderID <== from ITN1_NODE_$DEMOTE_NODE"
+                    "$JCLI" rest v0 leaders delete "$leaderID" -h "$DEMOTE_RESTAPI_URL"
+                done
+            ## otherwise let's just log that there was no leader to demote
+            else
+                echo "ITN1_NODE_$DEMOTE_NODE does not have any leader to demote"
+                continue
+            fi
+        done
+
+        ## PROMOTE AT LAST....
+        ## let's set the needed variables
+        PROMOTE_NODE=${NODE_REST_PORT:(-1)}
+        PROMOTE_NODE_DIR="${ITN1_MAIN_DIR}/itn1_node_${PROMOTE_NODE}"
+        PROMOTE_NODE_SECRET="itn1_node_${PROMOTE_NODE}_secret.yaml"
+        PROMOTE_RESTAPI_PORT="$NODE_REST_PORT"
+        PROMOTE_RESTAPI_URL="http://127.0.0.1:$PROMOTE_RESTAPI_PORT/api"
+
+        ## and finally promote the best leader
+        ## does it have a leader already?
+        hasLeaders=$($JCLI rest v0 leaders get -h "$PROMOTE_RESTAPI_URL" | grep -v -e "^\\---" -e "^\\[" -c)
+        ## if it does, let's skip ahead, we don't want multiple leaders...
+        if [ "$hasLeaders" -ge "1" ]; then
+            echo "ITN1_NODE_$PROMOTE_NODE has a leader already"
+        ## if it doesn't have a leader already, promote a leader for the node
+        else
+            echo -n "ADDING a new leader to ITN1_PROMOTE_NODE_$PROMOTE_NODE with ID ==> "
+            "$JCLI" rest v0 leaders post -f "$PROMOTE_NODE_DIR"/"$PROMOTE_NODE_SECRET" -h "$PROMOTE_RESTAPI_URL"
+            echo
+        fi
+    fi
+fi
+
+## WE PROTECC, WE CLEAN UP
+## unset arrays just in case
+unset nodeRestPortArray
+unset demoteRestPortArray
+unset lastBlockHeightArray
+unset peerConnectedCntArray
+
+## remove the temporary file
+rm "$tmpFile"

@@ -1,0 +1,696 @@
+#!/bin/bash
+
+## source: https://github.com/gacallea/itn1_cluster
+## this script helps you set up your itn1_cluster while you follow the guide: https://github.com/gacallea/itn1_cluster/blob/master/ITN1_CLUSTER.md
+
+## source the 'itn1_config' variables
+# shellcheck source=../itn1_config
+. ../itn1_config
+
+## script name to be used in commands examples
+SCRIPTNAME="${0##*/}"
+
+## we need to store the original public port for later
+ITN1_PUBLIC_PORT_Length=${#ITN1_PUBLIC_PORT[@]}
+ITN1_REST_API_PORT_Length=${#ITN1_REST_API_PORT[@]}
+
+## let's make sure of the requirements first
+function preFlight() {
+    ## does the secret file exist
+    if [ ! -f "$ITN1_SECRET_FILE" ]; then
+        echo -e "\\nError: the '$ITN1_SECRET_FILE' file is missing, copy your pool 'node-secret.yaml' to \"/root/itn1_cluster/files/node-secret.yaml\""
+        exit 1
+    fi
+
+    ## is the node count set in the config file
+    if [[ -n "$ITN1_NODES_COUNT" ]]; then
+        ## must be an integer
+        if ! [[ "$ITN1_NODES_COUNT" =~ ^[0-9]+$ ]]; then
+            echo -e "\\nINT Error: node count can be integers only\\n"
+            exit 30
+        ## must be at least two nodes
+        elif [[ "$ITN1_NODES_COUNT" -lt 2 ]]; then
+            echo "you have entered a node count of less then 2, this script is to set up at least 2 nodes that can be promoted to leader."
+            echo "if you want to run a single node, follow this guide: https://github.com/gacallea/cardanoRelatedStuff/blob/master/NACG.md"
+            exit 2
+        fi
+    ## please specify an argument
+    else
+        echo "SET the number of nodes you want to create in 'itn1_config'"
+        exit 3
+    fi
+
+    if [[ "${ITN1_PUBLIC_PORT_Length[*]}" != "${ITN1_REST_API_PORT_Length[*]}" ]] || [[ "${ITN1_PUBLIC_PORT_Length[*]}" != "$ITN1_NODES_COUNT" ]] || [[ "$ITN1_NODES_COUNT" != "${ITN1_REST_API_PORT_Length[*]}" ]]; then
+        echo "The number of ITN1_NODES_COUNT, ITN1_PUBLIC_PORT, and ITN1_REST_API_PORT must match.... fix that in your itn1_config"
+        echo "ITN1_NODES_COUNT: $ITN1_NODES_COUNT"
+        echo "ITN1_PUBLIC_PORT: ${ITN1_PUBLIC_PORT_Length[*]}"
+        echo "ITN1_REST_API_PORT: ${ITN1_REST_API_PORT_Length[*]}"
+        exit 4
+    fi
+}
+
+## let's create the non-root service user to run jormungandr
+function createPoolUser() {
+    preFlight
+    ## if the service user doesn't exist already, let's create one
+    if ! id "$ITN1_USERNAME" >/dev/null 2>&1; then
+        useradd -c "user to run the itn1 cluster" -m -d "$ITN1_MAIN_DIR" -s /sbin/nologin "$ITN1_USERNAME"
+        passwd -d "$ITN1_USERNAME"
+        echo "User '$ITN1_USERNAME' successfully created with home dir '$ITN1_MAIN_DIR'"
+    ## if it does, exit gracefully and le tthe user know
+    else
+        echo "The user $ITN1_USERNAME already exists! You are good."
+        exit 5
+    fi
+}
+
+## install the necessary packages
+function softwareInstall() {
+    preFlight
+    apt update && apt upgrade -y
+    apt install -y bc cbm ccze chrony curl dateutils fail2ban git git-man htop jq lshw manpages most musl net-tools ripgrep speedtest-cli sudo sysstat tcptraceroute telnet tmux tmux-plugin-manager tmuxinator vim vim-common vim-runtime vim-tiny vnstat wget
+    apt -t buster-backports install firewalld nftables
+    curl -s http://www.vdberg.org/~richard/tcpping -o /usr/local/bin/tcpping
+    chmod +x /usr/local/bin/tcpping
+
+    echo "Software installed :)"
+}
+
+## configure system
+function setFirewalld() {
+    preFlight
+
+    cat <<LOGS >/etc/logrotate.d/firewalld
+/var/log/firewalld {
+    daily
+    rotate 30
+    copytruncate
+    compress
+    delaycompress
+    notifempty
+    missingok
+}
+LOGS
+
+    for port in "${ITN1_PUBLIC_PORT[@]}"; do
+        firewall-cmd --permanent --zone=public --add-port="$port"/tcp
+    done
+
+    echo -e "\\nReloading firewall"
+    firewall-cmd --complete-reload
+    echo -e "\\nThese are your new firewall rules:"
+    firewall-cmd --list-all
+}
+
+## all of the thingies happen here
+function setupCluster() {
+    preFlight
+
+    ## temporary file to collect itn1_nodes address and public_id
+    ## used to set them as trusted peers at a later stage
+    tmpFile=$(mktemp -p .)
+
+    ## node id start from 1 for ports match convenience
+    ITN1_NODE_ID=1
+
+    ## while node id is less or equal than node count
+    while [[ "$ITN1_NODE_ID" -le "$ITN1_NODES_COUNT" ]]; do
+        ## generate a random public_id...
+        ITN1_PUBLIC_ID=$(openssl rand -hex 24)
+        ## ...and collect it in the temp file
+        cat <<PEERS >>"$tmpFile"
+    - address: "/ip4/$ITN1_PUBLIC_IP_ADDR/tcp/${ITN1_PUBLIC_PORT[$ITN1_NODE_ID - 1]}"
+      id: $ITN1_PUBLIC_ID
+PEERS
+        ## create the node directories structure, numbered
+        ITN1_NODE_DIR="${ITN1_MAIN_DIR}/itn1_node_$ITN1_NODE_ID"
+        if [[ ! -d "$ITN1_NODE_DIR" ]]; then
+            mkdir -p "$ITN1_NODE_DIR"
+        fi
+        ITN1_STORAGE="${ITN1_NODE_DIR}/storage"
+        if [[ ! -d "$ITN1_STORAGE" ]]; then
+            mkdir -p "$ITN1_STORAGE"
+        fi
+        ## set directories permissions
+        chown -R "$ITN1_USERNAME":"$ITN1_USERNAME" "$ITN1_NODE_DIR"
+
+        ## create each itn_node config.yaml
+        cat <<EOF >./itn1_node_"$ITN1_NODE_ID"_config.yaml
+---
+log:
+- output: stderr
+  format: "plain"
+  level: "info"
+p2p:
+  listen_address: "/ip4/0.0.0.0/tcp/${ITN1_PUBLIC_PORT[$ITN1_NODE_ID - 1]}"
+  public_address: "/ip4/$ITN1_PUBLIC_IP_ADDR/tcp/${ITN1_PUBLIC_PORT[$ITN1_NODE_ID - 1]}"
+  public_id: $ITN1_PUBLIC_ID
+  topics_of_interest:
+    blocks: high
+    messages: high
+  max_connections: 512
+  max_inbound_connections: 256
+  max_unreachable_nodes_to_connect_per_event: 32
+  max_bootstrap_attempts: 3
+  gossip_interval: 4s
+  policy:
+    quarantine_duration: 15m
+  trusted_peers:
+rest:
+  listen: 127.0.0.1:${ITN1_REST_API_PORT[$ITN1_NODE_ID - 1]}
+storage: "$ITN1_STORAGE"
+mempool:
+    pool_max_entries: 10000
+    log_max_entries: 100000
+leadership:
+    logs_capacity: 4096
+http_fetch_block0_service:
+- "https://github.com/input-output-hk/jormungandr-block0/raw/master/data/"
+skip_bootstrap: false
+bootstrap_from_trusted_peers: false
+EOF
+        ## some feedback is always nice
+        echo
+        echo "Directory $ITN1_NODE_DIR created"
+        echo "Directory $ITN1_STORAGE created"
+
+        ## increment values by 1
+        ((ITN1_NODE_ID++))
+        ## exit while loop
+    done
+
+    ## count nodes id for the next step
+    howManyIds=$(grep -c id "$tmpFile")
+
+    ## iterate as many time as the number of created ids
+    for ((ITN1_NODE_ID = 1; ITN1_NODE_ID <= "$howManyIds"; ITN1_NODE_ID++)); do
+        ITN1_NODE_DIR="${ITN1_MAIN_DIR}/itn1_node_$ITN1_NODE_ID"
+        ITN1_NODE_CONF="./itn1_node_${ITN1_NODE_ID}_config.yaml"
+        ITN1_NODE_SECRET="./itn1_node_${ITN1_NODE_ID}_secret.yaml"
+
+        ## insert tmpfile nodes id address into each file
+        sed -i "/\\<trusted_peers\\>/ r $tmpFile" "$ITN1_NODE_CONF"
+
+        ## we don't want the same node id as trusted peer of itself
+        sed -i "/\\-\\ address\\:\\ \"\\/ip4\\/$ITN1_PUBLIC_IP_ADDR\\/tcp\\/${ITN1_PUBLIC_PORT[$ITN1_NODE_ID - 1]}\"/,+1 d" "$ITN1_NODE_CONF"
+
+        ## move node config file to node dir
+        mv "$ITN1_NODE_CONF" "$ITN1_NODE_DIR"/
+
+        ## cp node secret file to node dir
+        cp "$ITN1_SECRET_FILE" "$ITN1_NODE_DIR"/"$ITN1_NODE_SECRET"
+
+        ## set permissions
+        chown -R "$ITN1_USERNAME":"$ITN1_USERNAME" "$ITN1_NODE_DIR"
+
+        ## some feedback is always nice
+        echo
+        echo -e "File $ITN1_NODE_DIR/itn1_node_${ITN1_NODE_ID}_config.yaml created"
+        echo -e "File $ITN1_NODE_DIR/itn1_node_${ITN1_NODE_ID}_secret.yaml created"
+    done
+
+    ## we don't need the temporary file anymore
+    rm -f "$tmpFile"
+}
+
+function setupSystemd() {
+    preFlight
+
+    ## create the systemd UNIT file
+    cat <<UNIT >/etc/systemd/system/itn1_cluster@.service
+[Unit]
+Description="ITN1 Cluster Instance #%i"
+PartOf=itn1_cluster.target
+After=multi-user.target
+
+[Service]
+Type=simple
+ExecStart=/usr/local/bin/jormungandr --config itn1_node_%i_config.yaml --secret itn1_node_%i_secret.yaml --genesis-block-hash $GENESIS_BLOCK_HASH
+ExecStop=/usr/local/bin/jcli rest v0 shutdown get -h http://127.0.0.1:${ITN1_REST_API_PORT[0]%?}%i/api
+
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=itn1_cluster_%i
+
+LimitNOFILE=32768
+
+Restart=on-failure
+RestartSec=5s
+
+User=$ITN1_USERNAME
+Group=$ITN1_USERNAME
+WorkingDirectory=$ITN1_MAIN_DIR/itn1_node_%i
+
+[Install]
+WantedBy=multi-user.target
+UNIT
+
+    ## populate the array with N nodes as needed in the TARGET file
+    for ((i = 1; i <= "$ITN1_NODES_COUNT"; i++)); do
+        itn1_cluster[++a]="itn1_cluster@$i.service"
+    done
+
+    ## create the systemd TARGET file
+    cat <<TARGET >/etc/systemd/system/itn1_cluster.target
+[Unit]
+Description="ITN1 Cluster Target"
+Wants=${itn1_cluster[@]}
+
+[Install]
+WantedBy=multi-user.target
+TARGET
+
+    ## failover unit + timer
+    cat <<FAILOVER >/etc/systemd/system/itn1_failover.service
+[Unit]
+Description="ITN1 Cluster Leader Failover"
+After=itn1_cluster.target
+
+[Service]
+Type=simple
+ExecStart=/root/itn1_helpers/itn1_failover
+
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=itn1_failover
+FAILOVER
+
+    cat <<TIMER >/etc/systemd/system/itn1_failover.timer
+[Unit]
+Description="Manage ITN Cluster Leader Failover"
+
+[Timer]
+OnUnitActiveSec=30s
+AccuracySec=1us
+OnCalendar=*:*:0/30
+Unit=itn1_failover.service
+
+[Install]
+WantedBy=multi-user.target
+TIMER
+
+    ## some feedback is always nice
+    echo
+    cat <<EOF
+Systemd files created:
+  - /etc/systemd/system/itn1_cluster@.service
+  - /etc/systemd/system/itn1_cluster.target
+  - /etc/systemd/system/itn1_failover.service (more on this later)
+  - /etc/systemd/system/itn1_failover.timer (more on this later)
+EOF
+
+    ## reload systemd
+    systemctl daemon-reload
+}
+
+function setLogging() {
+    ## populate rsyslogd file
+    cat <<RSYSLOG >/etc/rsyslog.d/90-itn1_cluster.conf
+if \$programname == 'itn1_cluster' then /var/log/itn1_cluster.log
+& stop
+RSYSLOG
+
+    ## populate logrotate file
+    cat <<LOGROTATE >/etc/logrotate.d/itn1_cluster
+/var/log/itn1_cluster.log {
+    daily
+    rotate 30
+    copytruncate
+    compress
+    delaycompress
+    notifempty
+    missingok
+}
+LOGROTATE
+
+    ## some feedback is always nice
+    echo
+    cat <<EOF
+Logging files created:
+  - /etc/rsyslog.d/90-itn1_cluster.conf
+  - /etc/logrotate.d/itn1_cluster
+EOF
+
+    ## reload the necessary services
+    systemctl restart rsyslog.service
+    systemctl restart logrotate.service
+}
+
+## set up the monitor.py scripts and systemd files
+function setMonitorPy() {
+
+    ## create the scripts directory
+    if ! [ -d "/etc/prometheus/jormungandr-monitor/" ]; then
+        mkdir -p /etc/prometheus/jormungandr-monitor/
+    fi
+
+    ## create as many scripts as needed
+    for ((i = 1; i <= "$ITN1_NODES_COUNT"; i++)); do
+        cat <<MONPY >/etc/prometheus/jormungandr-monitor/itn1_node${i}_monitor.py
+#!/usr/bin/env python
+
+from prometheus_client import Gauge
+from prometheus_client import Summary
+from prometheus_client import start_http_server
+from dateutil.parser import parse
+from systemd.journal import JournalHandler
+import time
+import sys
+import warnings
+import os
+import traceback
+import subprocess
+import json
+import logging
+
+log = logging.getLogger('itn1_node${i}-monitor')
+log.addHandler(JournalHandler())
+log.setLevel(logging.INFO)
+
+EXPORTER_PORT = int(os.getenv('PORT', '910$i'), 10)
+SLEEP_TIME = int(os.getenv('SLEEP_TIME', '10'), 10)
+JORMUNGANDR_API = os.getenv('JORMUNGANDR_RESTAPI_URL',
+                  os.getenv('JORMUNGANDR_API', 'http://127.0.0.1:310$i/api'))
+os.environ['JORMUNGANDR_RESTAPI_URL'] = JORMUNGANDR_API
+ADDRESSES = os.getenv('MONITOR_ADDRESSES', '').split()
+NODE_METRICS = [
+    "blockRecvCnt",
+    "lastBlockDate",
+    "lastBlockEpoch",
+    "lastBlockFees",
+    "lastBlockHash",
+    "lastBlockHeight",
+    "lastBlockSlot",
+    "lastBlockSum",
+    "lastBlockTime",
+    "lastBlockTx",
+    "txRecvCnt",
+    "uptime",
+    "peerConnectedCnt",
+]
+PIECE_METRICS = [
+    "lastBlockHashPiece1",
+    "lastBlockHashPiece2",
+    "lastBlockHashPiece3",
+    "lastBlockHashPiece4",
+    "lastBlockHashPiece5",
+    "lastBlockHashPiece6",
+    "lastBlockHashPiece7",
+    "lastBlockHashPiece8"
+]
+NaN = float('NaN')
+
+
+def metric_gauge(metric):
+    return Gauge(f'jormungandr_{metric}', 'ITN1_NODE$i {metric}')
+
+
+def piece_gauge(metric):
+    return Gauge(f'jormungandr_{metric}', 'ITN1_NODE$i {metric}')
+
+
+jormungandr_metrics = {metric: metric_gauge(metric) for metric in NODE_METRICS}
+jormungandr_pieces = {metric: piece_gauge(metric) for metric in PIECE_METRICS}
+
+jormungandr_funds = Gauge(f'jormungandr_address_funds',
+                                 f'Jomungandr Address funds in Lovelace',
+                                 ['addr'])
+jormungandr_counts = Gauge(f'jormungandr_address_counts',
+                                 f'Jomungandr Address counter',
+                                 ['addr'])
+
+to_reset = [
+    jormungandr_metrics,
+    jormungandr_pieces
+]
+
+to_reset_with_labels = [
+    jormungandr_funds,
+    jormungandr_counts
+]
+
+
+JORMUNGANDR_METRICS_REQUEST_TIME = Summary(
+    'jormungandr_metrics_process_time',
+    'Time spent processing itn1_node$i metrics')
+
+
+# Decorate function with metric.
+@JORMUNGANDR_METRICS_REQUEST_TIME.time()
+def process_jormungandr_metrics():
+    # Process jcli returned metrics
+    metrics = jcli_rest(['node', 'stats', 'get'])
+
+    try:
+        metrics['lastBlockTime'] = parse(metrics['lastBlockTime']).timestamp()
+    except:
+        log.info(f'failed to parse lastBlockTime')
+        metrics['lastBlockTime'] = NaN
+
+    try:
+        metrics['lastBlockEpoch'] = metrics['lastBlockDate'].split('.')[0]
+        metrics['lastBlockSlot'] = metrics['lastBlockDate'].split('.')[1]
+    except:
+        log.info(f'failed to parse lastBlockDate into pieces')
+
+    for metric, gauge in jormungandr_metrics.items():
+        gauge.set(sanitize(metrics[metric]))
+
+    # Process pieced metrics from jcli parent metrics
+    try:
+        blockHashPieces = {}
+        lastBlockHashProcess = hex(int(metrics['lastBlockHash'],16))[2:]
+        for i, (x, y) in enumerate(list(zip(range(-64,8,8),range(-56,8,8))),1):
+            if y == 0:
+                y = None
+            blockHashPieces['lastBlockHashPiece'+str(i)] = int(lastBlockHashProcess[slice(x,y)],16)
+        for metric, gauge in jormungandr_pieces.items():
+            gauge.set(sanitize(blockHashPieces[metric]))
+    except:
+        log.info(f'failed to parse lastBlockHash pieces')
+        for gauge in jormungandr_pieces.values():
+            gauge.set(NaN)
+
+
+JORMUNGANDR_ADDRESSES_REQUEST_TIME = Summary(
+    'jormungandr_addresses_process_time',
+    'Time spent processing itn1_node$i addresses')
+
+
+@JORMUNGANDR_ADDRESSES_REQUEST_TIME.time()
+def process_jormungandr_addresses():
+    for address in ADDRESSES:
+        data = jcli_rest(['account', 'get', address])
+        jormungandr_funds.labels(addr=address).set(sanitize(data['value']))
+        jormungandr_counts.labels(addr=address).set(sanitize(data['counter']))
+
+
+def sanitize(metric):
+    if isinstance(metric, str):
+        try:
+            metric = float(metric)
+        except ValueError:
+            try:
+                metric = int(metric, 16)
+            except ValueError:
+                metric = NaN
+    elif not isinstance(metric, (float, int)):
+        metric = NaN
+    return metric
+
+
+def jcli_rest(args):
+    flags = ['--host', JORMUNGANDR_API, '--output-format', 'json']
+    params = ['jcli', 'rest', 'v0'] + args + flags
+    result = subprocess.run(params, stdout=subprocess.PIPE)
+    return json.loads(result.stdout)
+
+
+if __name__ == '__main__':
+    # Start up the server to expose the metrics.
+    log.info(f"Starting metrics at http://localhost:{EXPORTER_PORT}")
+    start_http_server(EXPORTER_PORT)
+    # Main Loop: Process all API's and sleep for a certain amount of time
+    while True:
+        try:
+            process_jormungandr_metrics()
+            process_jormungandr_addresses()
+            log.info("Publishing metrics...")
+        except:
+            traceback.print_exc(file=sys.stdout)
+            log.info("failed to process itn1_node$i metrics")
+            for d in to_reset:
+                for gauge in d.values():
+                    gauge.set(NaN)
+            for gauge in to_reset_with_labels:
+                gauge._metrics.clear()
+        time.sleep(SLEEP_TIME)
+MONPY
+    done
+
+    ## create the systemd UNIT file
+    cat <<UNIT >/etc/systemd/system/itn1_monitor@.service
+[Unit]
+Description="ITN1 Monitoring #%i"
+PartOf=itn1_monitor.target
+After=itn1_cluster.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/python3 /etc/prometheus/jormungandr-monitor/itn1_node%i_monitor.py
+
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=itn1_monitor_%i
+
+Restart=on-failure
+RestartSec=5s
+
+[Install]
+WantedBy=multi-user.target
+UNIT
+
+    ## populate the array with N nodes as needed in the TARGET file
+    for ((i = 1; i <= "$ITN1_NODES_COUNT"; i++)); do
+        itn1_monitor[++m]="itn1_monitor@$i.service"
+    done
+
+    ## create the systemd TARGET file
+    cat <<TARGET >/etc/systemd/system/itn1_monitor.target
+[Unit]
+Description="ITN1 Monitoring Target"
+Wants=${itn1_monitor[@]}
+
+[Install]
+WantedBy=multi-user.target
+TARGET
+}
+
+## setup the prometheus config
+function setPrometheus() {
+    cat <<PROM >/etc/prometheus/prometheus.yml
+# ITN1 Cluster Config for Prometheus.
+
+global:
+  scrape_interval:     15s # Set the scrape interval to every 15 seconds. Default is every 1 minute.
+  evaluation_interval: 15s # Evaluate rules every 15 seconds. The default is every 1 minute.
+
+  # Attach these labels to any time series or alerts when communicating with
+  # external systems (federation, remote storage, Alertmanager).
+  external_labels:
+      monitor: 'ITN1 Cluster Monitor'
+
+# A scrape configuration containing exactly one endpoint to scrape:
+scrape_configs:
+  - job_name: 'prometheus'
+    scrape_interval: 5s
+    scrape_timeout: 5s
+    static_configs:
+      - targets: ['localhost:9090']
+
+  - job_name: 'node_exporter'
+    static_configs:
+      - targets: ['localhost:9100']
+
+PROM
+
+    for ((i = 1; i <= "$ITN1_NODES_COUNT"; i++)); do
+        ## inser nodes jobs
+        cat <<NODE >>/etc/prometheus/prometheus.yml
+  - job_name: 'itn1_node$i'
+    static_configs:
+      - targets: ['localhost:910$i']
+
+NODE
+    done
+}
+
+## copy the scripts over to root and set root's crontab
+function setScripts() {
+    ## let's copy the scripts into place
+    \cp -af /root/itn1_cluster_repo/itn1_cluster/scripts/* /root/
+
+    ## set crontab
+    cronfile=$(mktemp)
+    cat <<CRON >"$cronfile"
+## itn1_cluster cronjobs
+* * * * * /root/itn1_helpers/itn1_sendmytip
+* * * * * /root/itn1_helpers/itn1_failover
+*/3 * * * * /root/itn1_helpers/itn1_synccache
+*/5 * * * * /root/itn1_helpers/itn1_stuckrestart
+0 */1 * * * /root/itn1_helpers/itn1_blocksbackup
+15 19 * * * /root/itn1_helpers/itn1_sendslots
+CRON
+
+    crontab -l -u root | cat - "$cronfile" | crontab -u root -
+    rm -f "$cronfile"
+}
+
+# the --help command -- show the usage text
+function usage() {
+    cat <<USAGE
+
+    '$SCRIPTNAME' MUST BE USED IN CONJUNCTION WITH THE ITN1 CLUSTER GUIDE: https://github.com/gacallea/itn1_cluster/blob/master/ITN1_CLUSTER.md
+
+    BEFORE YOU RUN '$SCRIPTNAME':
+
+        - MAKE SURE YOU EDIT 'itn1_config' TO CONFIGURE THE NECESSARY VARIABLES
+        - MAKE SURE TO COPY YOUR 'node-secret.yaml' IN THE 'files' DIRECTORY
+
+USAGE
+}
+
+## main ##
+while true; do
+    case "$1" in
+    '')
+        echo "$SCRIPTNAME: no arguments supplied"
+        usage
+        exit 0
+        ;;
+    -h | --help)
+        usage
+        exit 0
+        ;;
+    --create-pool-user)
+        createPoolUser
+        exit 0
+        ;;
+    --install-software)
+        softwareInstall
+        exit 0
+        ;;
+    --set-firewall)
+        setFirewalld
+        exit 0
+        ;;
+    --set-cluster)
+        setupCluster
+        exit 0
+        ;;
+    --set-systemd)
+        setupSystemd
+        exit 0
+        ;;
+    --set-logging)
+        setLogging
+        exit 0
+        ;;
+    --set-monitorpy)
+        setMonitorPy
+        exit 0
+        ;;
+    --set-prometheus)
+        setPrometheus
+        exit 0
+        ;;
+    --set-scripts)
+        setScripts
+        exit 0
+        ;;
+    *)
+        echo "$SCRIPTNAME: unknown command '$1'"
+        exit 127
+        ;;
+    esac
+done

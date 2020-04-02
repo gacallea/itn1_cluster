@@ -1,0 +1,164 @@
+#!/bin/bash
+
+## source: https://github.com/gacallea/itn1_cluster
+## put the script in '/root/itn1_helpers/itn1_sendslots'
+## put this in root's crontab (crontab -e):
+## 15 19 * * * /root/itn1_helpers/itn1_sendslots
+
+## source the custom variables
+. /root/itn1_config
+
+## IF UNSURE, LEAVE DEFAULTS IN PLACE
+## CHANGE BELOW VARIABLES TO DETERMINE WHAT YOU UPLOAD TO POOLTOOL (EITHER GPG OR HASH)
+VERIFY_SLOTS_GPG="true"
+VERIFY_SLOTS_HASH="false"
+
+## IF UNSURE, LEAVE DEFAULTS IN PLACE
+## temporary keys location directory
+KEY_LOCATION="/root/keystorage"
+
+#######################################################################################################################################
+
+### DO NOT EDIT PAST THIS POINT ### ## DO NOT CHANGE ### DO NOT EDIT PAST THIS POINT ### ## DO NOT CHANGE #### ## #
+### DO NOT EDIT PAST THIS POINT ### ## DO NOT CHANGE ### DO NOT EDIT PAST THIS POINT ### ## DO NOT CHANGE #### ## #
+
+# we only actually look at the first 7 characters
+THIS_GENESIS="8e4d2a343f3dcf93"
+
+## Testing if variables are set
+if [ -z "$MY_POOL_ID" ] || [ -z "$MY_USER_ID" ] || [ -z "$THIS_GENESIS" ] || [ -z "$KEY_LOCATION" ]; then
+    echo "One or more variables not set."
+    echo "MY_POOL_ID = $MY_POOL_ID"
+    echo "MY_USER_ID = $MY_USER_ID"
+    echo "THIS_GENESIS = $THIS_GENESIS"
+    echo "KEY_LOCATION = $KEY_LOCATION"
+    exit 1
+fi
+
+## Let's make sure the KEY_LOCATION directory exists
+if [ ! -d "$KEY_LOCATION" ]; then
+    if ! mkdir -p "$KEY_LOCATION"; then
+        echo "Unable to create Key directory. Please create manually or use a different path."
+        exit 2
+    fi
+fi
+
+## temporary file
+TMP_FILE=$(mktemp)
+
+## Calculating the needed EPOCHs
+chainstartdate=1576264417
+elapsed=$((($(date +%s) - chainstartdate)))
+CURRENT_EPOCH=$(((elapsed / 86400)))
+PREVIOUS_EPOCH=$((CURRENT_EPOCH - 1))
+
+## needed arrays declarations
+declare -a lastBlockHeightArray
+declare -a nodeAvailableRestArray
+
+## choose the node to query for variables depending on height
+for ((i = 0; i < "$ITN1_NODES_COUNT"; i++)); do
+    ## temporary node variable to cycle through
+    NODE_REST_API_PORT="${ITN1_REST_API_PORT[i]}"
+    NODE_REST_API_URL="http://127.0.0.1:$NODE_REST_API_PORT/api"
+
+    ## query each node for status
+    nodeStatus=$($JCLI rest v0 node stats get -h "$NODE_REST_API_URL" | awk '/state/ {print $2}')
+
+    ## if the node is running...
+    if [ "$nodeStatus" == "Running" ]; then
+        ## query each node
+        $JCLI rest v0 node stats get -h "$NODE_REST_API_URL" --output-format json >"$TMP_FILE"
+        ## get the height only, highest to be node for the curl variables later
+        lastBlockHeightArray[++a]=$(jq -r .lastBlockHeight "$TMP_FILE")
+        ## only get the ports for the available nodes (state running)
+        nodeAvailableRestArray[++v]=$NODE_REST_API_PORT
+    elif [ "$nodeStatus" == "Bootstrapping" ]; then
+        echo "the node is Bootstrapping, exiting the routine"
+        continue
+    else
+        echo "ERROR: THE NODE IS NOT RUNNING, EXITING THE ROUTINE"
+        continue
+    fi
+done
+
+## set some default values to later select node...
+NODE_REST_PORT=${nodeAvailableRestArray[1]} ## 1 for element valute at length position 1
+NODE_HEIGHT=${lastBlockHeightArray[1]}      ## 1 for element valute at length position 1
+
+## ...by iterating over the LENGTH of the array we set above (+1 needed to match index)
+lastBlockHeightLength=${#lastBlockHeightArray[@]}
+for ((n = 1; n < lastBlockHeightLength + 1; n++)); do
+    ## let's avoid 'null' values from botstrapping nodes
+    if [[ "$NODE_HEIGHT" =~ ^[0-9] ]]; then
+        ## index with the highest lastBlockHeight wins...
+        ## ...and it's set as index value to use in the actual REST query later
+        if [[ "${lastBlockHeightArray[$n]}" -gt "$NODE_HEIGHT" ]]; then
+            NODE_HEIGHT="${lastBlockHeightArray[$n]}"
+            NODE_REST_PORT="${nodeAvailableRestArray[$n]}"
+        fi
+    fi
+done
+
+SELECTED_REST_API_PORT="$NODE_REST_PORT"
+SELECTED_REST_API_URL="http://127.0.0.1:$SELECTED_REST_API_PORT/api"
+
+## Getting the assigned slots
+CURRENT_SLOTS=$($JCLI rest v0 leaders logs get -h "$SELECTED_REST_API_URL" --output-format json | jq -c '[ .[] | select(.scheduled_at_date | startswith('\""$CURRENT_EPOCH"\"')) ]')
+ASSIGNED_SLOTS=$(echo "$CURRENT_SLOTS" | jq '. | length')
+
+if [ "$VERIFY_SLOTS_GPG" == "true" ]; then
+    ## Generating symmetric key for current epoch and retrieving previous epoch key
+    if [ -f "${KEY_LOCATION}/passphrase_${PREVIOUS_EPOCH}" ]; then
+        PREVIOUS_EPOCH_KEY=$(cat "${KEY_LOCATION}"/passphrase_${PREVIOUS_EPOCH})
+    else
+        PREVIOUS_EPOCH_KEY=""
+    fi
+
+    if [ -f "${KEY_LOCATION}/passphrase_${CURRENT_EPOCH}" ]; then
+        CURRENT_EPOCH_KEY=$(cat "${KEY_LOCATION}"/passphrase_"${CURRENT_EPOCH}")
+    else
+        CURRENT_EPOCH_KEY=$(openssl rand -base64 32 | tee "${KEY_LOCATION}"/passphrase_"${CURRENT_EPOCH}")
+    fi
+
+    ## Encrypting current slots for sending to pooltool
+    CURRENT_SLOTS_ENCRYPTED=$(echo "$CURRENT_SLOTS" | gpg --symmetric --armor --batch --passphrase "${CURRENT_EPOCH_KEY}")
+    ## Creating JSON for sending to pooltool
+    JSON="$(jq -n --compact-output --arg CURRENTEPOCH "$CURRENT_EPOCH" --arg POOLID "$MY_POOL_ID" --arg USERID "$MY_USER_ID" --arg GENESISPREF "$THIS_GENESIS" --arg ASSIGNED "$ASSIGNED_SLOTS" --arg KEY "$PREVIOUS_EPOCH_KEY" --arg SLOTS "$CURRENT_SLOTS_ENCRYPTED" '{currentepoch: $CURRENTEPOCH, poolid: $POOLID, genesispref: $GENESISPREF, userid: $USERID, assigned_slots: $ASSIGNED, previous_epoch_key: $KEY, encrypted_slots: $SLOTS}')"
+    echo "Packet Sent: $JSON"
+    echo "Response Received: $(curl -s -H "Accept: application/json" -H "Content-Type:application/json" -X POST --data "$JSON" "https://api.pooltool.io/v0/sendlogs")"
+    exit 3
+fi
+
+if [ "$VERIFY_SLOTS_HASH" == "true" ]; then
+    ## Pushing the current slots to file and getting the slots from the last epoch.
+    if [ -f "${KEY_LOCATION}/leader_slots_${PREVIOUS_EPOCH}" ]; then
+        LAST_EPOCH_SLOTS=$(cat "${KEY_LOCATION}"/leader_slots_${PREVIOUS_EPOCH})
+    else
+        LAST_EPOCH_SLOTS=""
+    fi
+
+    if [ ! -f "${KEY_LOCATION}/leader_slots_${CURRENT_EPOCH}" ]; then
+        echo -n "$CURRENT_SLOTS" | tee "${KEY_LOCATION}"/leader_slots_"${CURRENT_EPOCH}"
+    fi
+
+    ## Hash verification version goes here. I know its verbose, but its so much easier for people to decode and customize if we keep them all separate
+    CURRENT_EPOCH_HASH=$(echo -n "$CURRENT_SLOTS" | sha256sum | cut -d" " -f1 | tee "${KEY_LOCATION}"/hash_"${CURRENT_EPOCH}")
+    JSON="$(jq -n --compact-output --arg CURRENTEPOCH "$CURRENT_EPOCH" --arg POOLID "$MY_POOL_ID" --arg USERID "$MY_USER_ID" --arg GENESISPREF "$THIS_GENESIS" --arg ASSIGNED "$ASSIGNED_SLOTS" --arg HASH "$CURRENT_EPOCH_HASH" --arg SLOTS "$LAST_EPOCH_SLOTS" '{currentepoch: $CURRENTEPOCH, poolid: $POOLID, genesispref: $GENESISPREF, userid: $USERID, assigned_slots: $ASSIGNED, this_epoch_hash: $HASH, last_epoch_slots: $SLOTS}')"
+    echo "Packet Sent: $JSON"
+    echo "Response Received: $(curl -s -H "Accept: application/json" -H "Content-Type:application/json" -X POST --data "$JSON" "https://api.pooltool.io/v0/sendlogs")"
+    exit 4
+fi
+
+## IF WE GET TO HERE THEN NEITHER VERIFICATION METHOD IS BEING USED. JUST SEND CURRENT SLOTS
+JSON="$(jq -n --compact-output --arg CURRENTEPOCH "$CURRENT_EPOCH" --arg POOLID "$MY_POOL_ID" --arg USERID "$MY_USER_ID" --arg GENESISPREF "$THIS_GENESIS" --arg ASSIGNED "$ASSIGNED_SLOTS" '{currentepoch: $CURRENTEPOCH, poolid: $POOLID, genesispref: $GENESISPREF, userid: $USERID, assigned_slots: $ASSIGNED}')"
+echo "Packet Sent: $JSON"
+echo "Response Received: $(curl -s -H "Accept: application/json" -H "Content-Type:application/json" -X POST --data "$JSON" "https://api.pooltool.io/v0/sendlogs")"
+
+## we protecc, we clean up
+rm "$TMP_FILE"
+unset ITN1_REST_API_PORT
+unset lastBlockHeightArray
+unset nodeAvailableRestArray
+
+exit 5

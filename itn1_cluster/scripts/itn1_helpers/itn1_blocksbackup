@@ -1,0 +1,36 @@
+#!/bin/bash
+
+## source: https://github.com/gacallea/itn1_cluster
+## this script backups each itn1_cluster node 'blocks.sqlite' every 1h to offer a safety net in case it's needed
+## put the script in '/root/itn1_helpers/itn1_blocksbackup'
+## put this in root's crontab (crontab -e):
+## 0 */1 * * * /root/itn1_helpers/itn1_blocksbackup
+
+## source the custom variables
+. /root/itn1_config
+
+## lets just have one date please
+COMMON_DATE=$(date +%F-%H%M%S)
+
+## populate the array with N nodes as needed in the TARGET file
+for (( i = 1; i <= "$ITN1_NODES_COUNT"; i++ )); do
+    NODE_DIR="${ITN1_MAIN_DIR}/itn1_node_$i"
+    NODE_STORAGE_DIR="${NODE_DIR}/storage"
+    NODE_STORAGE_FILE="${NODE_STORAGE_DIR}/blocks.sqlite"
+    NODE_BACKUP_DIR="${NODE_DIR}/backups"
+    NODE_BACKUP_FILE="${NODE_BACKUP_DIR}/blocks.$COMMON_DATE.sqlite.backup"
+
+    if [ ! -d "$NODE_BACKUP_DIR" ]; then
+        mkdir -p "$NODE_BACKUP_DIR"
+    fi
+
+    cp "$NODE_STORAGE_FILE" "$NODE_BACKUP_FILE"
+    bzip2 "$NODE_BACKUP_FILE"
+    chown -R "$ITN1_USERNAME":"$ITN1_USERNAME" "$NODE_BACKUP_DIR"
+
+    echo -e "\\nBACKUP ==> ${NODE_BACKUP_FILE}.bz2  <== executed @ $(date --iso-8601=ns)\\n"
+
+    ## remove backups older than 24h
+    find "$NODE_BACKUP_DIR" -type f -mtime +0 -exec rm -f '{}' \;
+done
+
