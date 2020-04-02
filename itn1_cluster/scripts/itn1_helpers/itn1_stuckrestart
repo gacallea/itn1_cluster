@@ -54,6 +54,17 @@ for ((i = 0; i < "$ITN1_NODES_COUNT"; i++)); do
         continue
     fi
 
+    ## if node is stuck...
+    if [ "$lastBlockDate" == "0.0" ]; then
+        ## ...restart it
+        echo
+        /usr/bin/systemctl restart itn1_cluster@"$ITN1_NODE_NUM".service
+        echo "ITN_NODE_$ITN1_NODE_NUM ==> $poolID <== was RESTARTED @ $(date)"
+        ## let's trigger the failover in case the leader restarted...
+        sleep 15
+        bash /root/itn1_helpers/itn1_failover
+    fi
+
     ## if we reach this point, the node as running and we've got valid variables assignments to compare to
     ## ...check against the blocks delta
     deltaBlockCount=$(echo "$nowBlockDate - $lastBlockDate" | bc | sed 's/0//g' | sed 's/\.//g')
