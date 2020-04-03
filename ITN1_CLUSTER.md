@@ -1113,14 +1113,15 @@ Usage: 'itn1_cluster command [options]'
         --get-leader                            int1 || --all                       get the leader(s) ID(s) of a single node; '--all' for all nodes
         --promote-leader                        int1 || --all                       add next progressive leader ID to a node; use '--all' at your own risk....
         --demote-leader                         int1 int2 || --all                  remove the 'int2' leader ID from a single node; '--all' for all nodes
+        --swap-leader                           int1 int2                           swap leadership from node 'int1' to node 'int2'; be very careful with this one....
 
         --account-balance                       int1                                check INSL account balance
         --current-stakes                        int1                                check INSL current stakes balance
         --live-stakes                           int1                                check INSL live stakes balance
-        --epoch-stakes                          int1 int2                           check INSL specific epoch (int2) stakes balance
-        --epoch-rewards                         int1 int2                           check INSL specific epoch (int2) rewards balance
+        --epoch-stakes                          int1 int2                           check INSL specific epoch 'int2' stakes balance
+        --epoch-rewards                         int1 int2                           check INSL specific epoch 'int2' rewards balance
         --rewards-balance                       int1                                check INSL rewards balance
-        --rewards-history                       int1 int2                           check INSL rewards history (int2) of the length last epoch(s) from tip
+        --rewards-history                       int1 int2                           check INSL rewards history 'int2' of the length last epoch(s) from tip
 
         --leader-logs                           int1                                show the full leader logs for INSL
         --scheduled-slots                       int1                                check how many slots is INSL node scheduled for
