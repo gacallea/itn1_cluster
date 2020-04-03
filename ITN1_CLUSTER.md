@@ -72,6 +72,7 @@
       - [Firewalld Configuration](#firewalld-configuration)
       - [Nginx Reverse Proxy](#nginx-reverse-proxy)
       - [Let's Encrypt](#lets-encrypt)
+      - [Prometheus Data Source](#prometheus-data-source)
       - [Installing Dashboards](#installing-dashboards)
   - [More Tools](#more-tools)
     - [tmux](#tmux)
@@ -1329,7 +1330,9 @@ Grafana is a graphing software that provides dashboards that give you a complete
 
 #### Grafana Configuration ####
 
-The Grafana configuration has pretty solid default values. You only need to change a handful to successfully configure it. Here, ```grafana.example.com``` is used as an example, you can use whatever suits you to replace the ```grafana.``` bit (for instance ```monitoring.```). However, **the domain has to match your actual domain**. Here's what needs changing (in which blocks):
+The Grafana configuration has pretty solid default values. You only need to change a handful to successfully configure it. Here, ```grafana.example.com``` is used as an example, you can use whatever suits you to replace the ```grafana.``` bit (for instance ```monitoring.```). However, **the domain has to match your actual domain**.
+
+Edit ```/etc/grafana/grafana.ini```. Here's what needs changing (look for the respective **[blocks]**):
 
 ##### [server] #####
 
@@ -1445,11 +1448,17 @@ Restart Nginx with:
 systemctl restart nginx.service
 ```
 
+#### Prometheus Data Source ####
+
+It's time to tell Grafana to use Prometheus. Connect to Grafana by browsing to ```https://grafana.example.com```. Login with the default credentials (user: ```admin```, password: ```admin```). Upon a successful login, you will be asked to create a new password for the admin user.
+
+Now browse to ```https://grafana.example.com/datasources``` and install (or make sure it's there) the Prometheus datasource. If you need help, refer to the [official documentation](https://grafana.com/docs/grafana/latest/features/datasources/prometheus/).
+
+![datasource](images/datasource.png)
+
 #### Installing Dashboards ####
 
-It is now time to connect to Grafana by browsing to ```https://grafana.example.com```. Login with the default credentials (user: ```admin```, password: ```admin```). Upon a successful login, you will be asked to create a new password for the admin user.
-
-Once logged in, install the following dashboards to make use of Node Exporter and Jormungandr Exporter:
+Once your datasource is set, install the following dashboards to make use of Node Exporter and Jormungandr Exporter:
 
 - Node Exporter Dashboard: [https://grafana.com/grafana/dashboards/1860](https://grafana.com/grafana/dashboards/1860)
 - Jormungandr Dashboard: [gacallea/itn1_cluster/blob/master/files/jormungandr-monitor.json](https://github.com/gacallea/itn1_cluster/blob/master/files/jormungandr-monitor.json)

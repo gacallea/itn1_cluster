@@ -68,7 +68,7 @@ function createPoolUser() {
 function softwareInstall() {
     preFlight
     apt update && apt upgrade -y
-    apt install -y bc cbm ccze chrony curl dateutils fail2ban git git-man htop jq lshw manpages most musl net-tools ripgrep speedtest-cli sudo sysstat tcptraceroute telnet tmux tmux-plugin-manager tmuxinator vim vim-common vim-runtime vim-tiny vnstat wget
+    apt install -y bc cbm ccze chrony curl dateutils dig fail2ban git git-man htop jq lshw manpages most musl net-tools ripgrep speedtest-cli sudo sysstat tcptraceroute telnet tmux tmux-plugin-manager tmuxinator vim vim-common vim-runtime vim-tiny vnstat wget
     apt -t buster-backports install firewalld nftables
     curl -s http://www.vdberg.org/~richard/tcpping -o /usr/local/bin/tcpping
     chmod +x /usr/local/bin/tcpping
