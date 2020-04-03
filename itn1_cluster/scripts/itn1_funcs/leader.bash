@@ -9,7 +9,7 @@ function itn1GetLeader() {
         ## loop over all nodes
         for ((i = 1; i <= "$ITN1_NODES_COUNT"; i++)); do
             ## to get each REST API port
-            ITN1_RESTAPI_URL="http://127.0.0.1:${ITN1_REST_API_PORT%?}$i/api"
+            ITN1_RESTAPI_URL="http://127.0.0.1:${ITN1_REST_API_PORT[$i - 1]}/api"
             ## set node number for prints
             NODE_NUM="$i"
             ## list leaders info for all nodes
@@ -58,7 +58,7 @@ function promoteALL() {
     ## loop over all nodes
     for ((i = 1; i <= "$ITN1_NODES_COUNT"; i++)); do
         ## set the environemnt variables for each node
-        ITN1_RESTAPI_URL="http://127.0.0.1:${ITN1_REST_API_PORT%?}$i/api"
+        ITN1_RESTAPI_URL="http://127.0.0.1:${ITN1_REST_API_PORT[$i - 1]}/api"
         NODE_DIR="${ITN1_MAIN_DIR}/itn1_node_$i"
         NODE_SECRET="itn1_node_${i}_secret.yaml"
         ## does it have a lader already?
@@ -73,7 +73,6 @@ function promoteALL() {
             ##...otherwise promote leader for node
             echo -n "ADDING a new leader to ITN1_NODE_$i with ID ==> "
             "$JCLI" rest v0 leaders post -f "$NODE_DIR"/"$NODE_SECRET" -h "$ITN1_RESTAPI_URL"
-            ## let's pause for a second in between, just in case
         fi
     done
 }
@@ -109,7 +108,7 @@ function itn1DemoteLeader() {
         ## loop over all nodes
         for ((i = 1; i <= "$ITN1_NODES_COUNT"; i++)); do
             ## set the environemnt variables for each node
-            ITN1_RESTAPI_URL="http://127.0.0.1:${ITN1_REST_API_PORT%?}$i/api"
+            ITN1_RESTAPI_URL="http://127.0.0.1:${ITN1_REST_API_PORT[$i - 1]}/api"
             nodeStatus=$($JCLI rest v0 node stats get -h "$ITN1_RESTAPI_URL" | awk '/state/ {print $2}')
             if [ "$nodeStatus" == "Running" ]; then
                 ## does it have a lader already?
@@ -167,38 +166,7 @@ function itn1DemoteLeader() {
     fi
 }
 
-#function itn1SwapLeader() {
-#    noArgsIsFineForThisOne
-#
-#    for (( i = 1; i <= "$ITN1_NODES_COUNT"; i++ )); do
-#        ## to get each REST API port
-#        ITN1_RESTAPI_URL="http://127.0.0.1:${ITN1_REST_API_PORT%?}$i/api"
-#        ## set node number for prints
-#        NODE_NUM="$i"
-#        ## are node down?
-#        NODE_DOWN=0
-#        ## are slots assgined to the pool?
-#        howManySlots=0
-#        ## list leaders info for all nodes
-#        nodeStatus=$($JCLI rest v0 node stats get -h "$ITN1_RESTAPI_URL" | awk '/state/ {print $2}')
-#        if [ "$nodeStatus" == "Running" ]; then
-#            ## how many slots?
-#            howManySlots=$($JCLI rest v0 leaders logs get -h "$ITN1_RESTAPI_URL" | grep -c created_at_time)
-#            echo "$howManySlots"
-#        elif [ "$nodeStatus" == "Bootstrapping" ]; then
-#            echo "NODE Warn: ITN1_NODE_$NODE_NUM is Bootstrapping, exiting the routine"
-#            continue
-#        else
-#            WHICH_DOWN[++a]="ITN1_NODE_$NODE_NUM"
-#            ((NODE_DOWN++))
-#            continue
-#        fi
-#    done
-#
-#    if [ "$NODE_DOWN" -gt 0 ]; then
-#        echo "NODE Error: ${WHICH_DOWN[*]} nodes are DOWN"
-#    elif [ "$NODE_DOWN" -eq "$ITN1_NODES_COUNT" ]; then
-#        echo "NODE Error: attention!!! ALL nodes are DOWN"
-#        exit 42
-#    fi
-#}
+function itn1SwapLeader() {
+    itn1DemoteLeader "$1" 1
+    itn1PromoteLeader "$2"
+}

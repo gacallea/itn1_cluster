@@ -5,9 +5,8 @@ function itn1QuarantinedIps() {
     checkNodesNum "$1"
     notAtALL
 
-    echo "List of IP addresses that were quarantined somewhat recently:"
+    echo "List of IP addresses that were quarantined recently:"
     curl -s "$ITN1_RESTAPI_URL"/v0/network/p2p/quarantined | rg -o "/ip4/.{0,16}" | sed -r '/\n/!s/[0-9.]+/\n&\n/;/^([0-9]{1,3}\.){3}[0-9]{1,3}\n/P;D' | sort -u
-    echo "End of somewhat recently quarantined IP addresses."
 }
 
 ## check how many quaratined IPs are in the above list?

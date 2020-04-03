@@ -31,7 +31,7 @@ function checkNodesNum() {
         NODE_DIR="${ITN1_MAIN_DIR}/itn1_node_$1"
         NODE_CONF="itn1_node_${1}_config.yaml"
         NODE_SECRET="itn1_node_${1}_secret.yaml"
-        ITN1_RESTAPI_URL="http://127.0.0.1:${ITN1_REST_API_PORT%?}$1/api"
+        ITN1_RESTAPI_URL="http://127.0.0.1:${ITN1_REST_API_PORT[$1 - 1]}/api"
     fi
 }
 
@@ -41,10 +41,3 @@ function notAtALL() {
         exit 128
     fi
 }
-
-#function noArgsIsFineForThisOne() {
-#    NODE_DIR="${ITN1_MAIN_DIR}/itn1_node_$1"
-#    NODE_CONF="itn1_node_${1}_config.yaml"
-#    NODE_SECRET="itn1_node_${1}_secret.yaml"
-#    ITN1_RESTAPI_URL="http://127.0.0.1:${ITN1_REST_API_PORT%?}$1/api"
-#}

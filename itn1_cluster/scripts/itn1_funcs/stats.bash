@@ -59,7 +59,7 @@ function itn1BootstrapTime() {
         ## loop over all nodes
         for ((i = 1; i <= "$ITN1_NODES_COUNT"; i++)); do
             ## temporary node variable to cycle through
-            NODE_RESTAPI_PORT="${ITN1_REST_API_PORT%?}$i"
+            NODE_RESTAPI_PORT="${ITN1_REST_API_PORT[$i - 1]}"
             NODE_RESTAPI_URL="http://127.0.0.1:$NODE_RESTAPI_PORT/api"
             NODE_STATE=$($JCLI rest v0 node stats get -h "$NODE_RESTAPI_URL" | awk '/state/ {print $2}')
             if [ "$NODE_STATE" == "Bootstrapping" ]; then
