@@ -1205,6 +1205,12 @@ pip3 install prometheus_client python-dateutil systemd-python ipython
 
 > **itn1_prepare**
 
+If you have accidentally changed directory, run:
+
+```text
+cd /root/itn1_cluster_repo/itn1_cluster/scripts/itn1_helpers/
+```
+
 Because you need to run as many ```itn1_nodeX_monitor.py``` instance as the number of your ```ITN1 Cluster``` nodes, it is time to generate as many files. For completeness of information, the only **needed** differences between all the scripts, are:
 
 - the instances names (for logging and metrics)
