@@ -1391,14 +1391,15 @@ dig grafana.example.com +short a
 
 #### Firewalld Configuration ####
 
-In order for the next steps to work, and to be able to remotely connect to your monitoring, the firewall need to be open for port ```443```. Issue these commands to do so:
+In order for the next steps to work, and to be able to remotely connect to your monitoring, the firewall need to be open for both port ```80``` and ```443```. Issue these commands to do so:
 
 ```text
+firewall-cmd --permanent --zone=public --add-port=80/tcp
 firewall-cmd --permanent --zone=public --add-port=443/tcp
 firewall-cmd --complete-reload
 ```
 
-To verify that everything has worked, issue the following and check for the added ```ports: 443/tcp```
+To verify that everything has worked, issue the following and check for the added ports: ```80/tcp``` and ```443/tcp```.
 
 ```text
 firewall-cmd --list-all
@@ -1424,6 +1425,12 @@ To configure the reverse-proxy, add this configuration to ```/etc/nginx/sites-av
 
 ```text
 server {
+  listen 80;
+  server_name grafana.example.com;
+  return 301 https://grafana.example.com$request_uri;
+}
+
+server {
   listen 443 ssl http2;
   server_name grafana.example.com;
 
@@ -1436,7 +1443,7 @@ server {
 }
 ```
 
-Enable it:
+Enable it by linking it to sites-available:
 
 ```text
 cd /etc/nginx/sites-enabled/
@@ -1452,11 +1459,30 @@ systemctl restart nginx.service
 certbot --nginx -d grafana.example.com
 ```
 
-If you need a more detailed guide to help you with ```certbot```, Digital Ocean has [a great guide](https://www.digitalocean.com/community/tutorials/how-to-secure-nginx-with-let-s-encrypt-on-debian-10) that can help.
+Certbot will also set and run a ```systemd-timer``` to renew the SSL certificate when necessary. If you need a more detailed guide to help you with ```certbot```, Digital Ocean has [a great guide](https://www.digitalocean.com/community/tutorials/how-to-secure-nginx-with-let-s-encrypt-on-debian-10) that can help.
 
-Upon the successful Certbot run, your Nginx configuration will be changed to use SSL. Do not touch it, as it is used and managed by Certbot at this point. Certbot will also set and run a ```systemd-timer``` to renew the SSL certificate when necessary.
+When you get to this point:
 
-Restart Nginx with:
+```text
+Please choose whether or not to redirect HTTP traffic to HTTPS, removing HTTP access.
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+1: No redirect - Make no further changes to the webserver configuration.
+2: Redirect - Make all requests redirect to secure HTTPS access. Choose this for
+new sites, or if you're confident your site works on HTTPS. You can undo this
+change by editing your web server's configuration.
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+Select the appropriate number [1-2] then [enter] (press 'c' to cancel):
+```
+
+Choose option ```1```, since your ```/etc/nginx/sites-available/grafana``` already includes a proper redirection. If you accidentally chose option ```2```, remove these lines from your configuration:
+
+```text
+if ($host = grafana.example.com) {
+  return 301 https://$host$request_uri;
+} # managed by Certbot
+```
+
+Now, restart Nginx:
 
 ```text
 systemctl restart nginx.service
