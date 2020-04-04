@@ -1492,7 +1492,7 @@ systemctl restart nginx.service
 
 It's time to tell Grafana to use Prometheus. Connect to Grafana by browsing to ```https://grafana.example.com```. Login with the default credentials (user: ```admin```, password: ```admin```). Upon a successful login, you will be asked to create a new password for the admin user.
 
-Now browse to ```https://grafana.example.com/datasources```, and search and install the Prometheus datasource. Make it default data source as well. If you need help, refer to the [official documentation](https://grafana.com/docs/grafana/latest/features/datasources/prometheus/).
+Now browse to ```https://grafana.example.com/datasources```, and search and install the Prometheus datasource. Make it default data source as well. If you need help, refer to the [official documentation](https://grafana.com/docs/grafana/latest/features/datasources/prometheus/#adding-the-data-source).
 
 ![datasource](images/datasource.png)
 
@@ -1503,7 +1503,7 @@ Once your datasource is set, install the following dashboards to make use of Nod
 - Node Exporter Dashboard: [https://grafana.com/grafana/dashboards/1860](https://grafana.com/grafana/dashboards/1860)
 - Jormungandr Dashboard: [gacallea/itn1_cluster/blob/master/files/jormungandr-monitor.json](https://github.com/gacallea/itn1_cluster/blob/master/files/jormungandr-monitor.json)
 
-No need to reinvent the wheel here, please follow the official documentation if you need guidance: [Grafana Export/Import](https://grafana.com/docs/grafana/latest/reference/export_import/).
+No need to reinvent the wheel here, please follow the official documentation if you need guidance: [Grafana Export/Import](https://grafana.com/docs/grafana/latest/reference/export_import/#importing-a-dashboard).
 
 Here's Insalada dahsborads examples:
 
