@@ -1492,7 +1492,7 @@ systemctl restart nginx.service
 
 It's time to tell Grafana to use Prometheus. Connect to Grafana by browsing to ```https://grafana.example.com```. Login with the default credentials (user: ```admin```, password: ```admin```). Upon a successful login, you will be asked to create a new password for the admin user.
 
-Now browse to ```https://grafana.example.com/datasources``` and install (or make sure it's there) the Prometheus datasource. If you need help, refer to the [official documentation](https://grafana.com/docs/grafana/latest/features/datasources/prometheus/).
+Now browse to ```https://grafana.example.com/datasources```, and search and install the Prometheus datasource. Make it default data source as well. If you need help, refer to the [official documentation](https://grafana.com/docs/grafana/latest/features/datasources/prometheus/).
 
 ![datasource](images/datasource.png)
 
