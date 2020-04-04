@@ -584,7 +584,7 @@ However, since this guide use ```firewalld```, ```fail2ban``` has to use that to
 cp /root/itn1_cluster_repo/itn1_cluster/files/jail.local /etc/fail2ban/jail.local
 ```
 
-And edit it to add your IP address to the existing ```ignoreip``` entry:
+Edit ```/etc/fail2ban/jail.local``` to add your IP address to the existing ```ignoreip``` entry:
 
 ```text
 ignoreip = 127.0.0.1/8 ::1 <YOUR_SERVER_PUBLIC_IP>
@@ -759,6 +759,24 @@ p2p:
       id: cb20e4eda3eda2c6738e94f4134295a44faf148645479444
     - address: "/ip4/8.8.8.8/tcp/3003"
       id: da24978fd12d10551293de47f0520a8fbd57c305c0f6070d
+    - address: "/ip4/13.56.0.226/tcp/3000"
+      id: 7ddf203c86a012e8863ef19d96aabba23d2445c492d86267
+    - address: "/ip4/54.183.149.167/tcp/3000"
+      id: df02383863ae5e14fea5d51a092585da34e689a73f704613
+    - address: "/ip4/52.9.77.197/tcp/3000"
+      id: fcdf302895236d012635052725a0cdfc2e8ee394a1935b63
+    - address: "/ip4/18.177.78.96/tcp/3000"
+      id: fc89bff08ec4e054b4f03106f5300034abdf2fcb444610e9
+    - address: "/ip4/3.115.154.161/tcp/3000"
+      id: 35bead7d45b3b8bda5e74aa12126d871069e7617b7f4fe62
+    - address: "/ip4/18.182.115.51/tcp/3000"
+      id: 8529e334a39a5b6033b698be2040b1089d8f67e0102e2575
+    - address: "/ip4/18.184.35.137/tcp/3000"
+      id: 06aa98b0ab6589f464d08911717115ef354161f0dc727858
+    - address: "/ip4/3.125.31.84/tcp/3000"
+      id: 8f9ff09765684199b351d520defac463b1282a63d3cc99ca
+    - address: "/ip4/3.125.183.71/tcp/3000"
+      id: 9d15a9e2f1336c7acda8ced34e929f697dc24ea0910c3e67
 rest:
   listen: 127.0.0.1:3101
 storage: "/home/pooldozer/itn1_node_1/storage"
@@ -975,7 +993,7 @@ Depending on how frequently you want to run ```itn1_faiover``` you have two **mu
 1. keep using the crontab that was set up earlier, to run it every minute.
 2. adjust the timing and enable the ```systemd``` ```timer``` that was created (but not enabled) during installation.
 
-**Beware that running ```itn1_failover``` too often can cause all sorts of performance issues.**
+**Beware that running ```itn1_failover``` too often can cause all sorts of performance issues. If unsure, keep using the cronjob that was set up for you and ignore the timer.**
 
 #### itn1-blocksbackup ####
 
@@ -989,17 +1007,13 @@ At times, a node could lag behind by a significant margin or be stuck. When this
 
 #### itn1-synccache ####
 
-At the time of this writing, I noticed that keeping the system cache under control and forcing a sync at a threshold, helps with the node health. I'm sure that future ```jormungandr``` version will eventually fix this, but for the time being I'm experimenting with this. I will file an issue on IOHK's GitHub to let them know about it, for the good of everyone.
-
-The script will check the system cache usage and intervene with a forced sync after the threshold (**it defaults to 4096)**. If your server only runs ```jormungandr```, the system cache would 100% reflect ```jormungandr``` cache. Adjust the values to suit your system, if it runs anything else. Be mindful that **anything more aggressive than the default threshold value could break your node**.
+At the time of this writing, I noticed that keeping the system cache under control and forcing a sync at a threshold, helps with the node health. The script will check the system cache usage and intervene with a forced sync after the threshold (**it defaults to 4GB)**. If your server only runs ```jormungandr```, the system cache would 100% reflect ```jormungandr``` cache. Adjust the values to suit your system, if it runs anything else. Be mindful that **anything more aggressive than the default threshold value could break your node**.
 
 #### itn1-sendmytip ####
 
 **IMPORTANT: this requires a Pooltool account and user ID. Make sure you configure [itn1 config](#itn1-config) as well.**
 
-What does it do? Essentially, ```itn1_sendmytip``` sends your pool tip statistics every minute to Pooltool. This data, send by as many pools as possible, is used by Pooltool to inform us all (on the site) of the latest height and make statistics about the whole network health.
-
-The ```itn1_sendmytip``` is exactly as the Pooltool's repo version, and it is provided here for convenience. Don't worry, I'm the maintainer of the script for Pooltool, so this would always be up to date and perfectly fine.
+Essentially, ```itn1_sendmytip``` sends your pool tip statistics every minute to Pooltool. This data, send by as many pools as possible, is used by Pooltool to inform us all (on the site) of the latest height and make statistics about the whole network health. The ```itn1_sendmytip``` functions exactly as the Pooltool's repo version, and it is modified to reflect ```ITN1 Cluster``` configuration. Don't worry, I'm the maintainer of the script for Pooltool, so this would always be up to date and perfectly fine.
 
 #### itn1-sendslots ####
 
@@ -1521,7 +1535,7 @@ There a number of useful community created resources, that can be very helpful f
 
 #### Pool Tool ####
 
-One very useful site, is [**PoolTool**](https://pooltool.io/) by [papacarp](https://twitter.com/mikefullman). It has all sort of network and pools statistics, and offers a number of useful tools for pool operators. One of them is about one's own pool health and status. Create an account and register your pool, to keep others informed about the state of your pool. Here's [mine](https://pooltool.io/pool/93756c507946c4d33d582a2182e6776918233fd622193d4875e96dd5795a348c) as an example.
+One very useful site, is [**PoolTool**](https://pooltool.io/) by [papacarp](https://twitter.com/mikefullman). It has all sort of network and pools statistics, and offers a number of useful tools for pool operators. One of them is about one's own pool health and status. By following this guide, you have already set up your pool with Pooltool. Here's [Insalada Stake Pool](https://pooltool.io/pool/93756c507946c4d33d582a2182e6776918233fd622193d4875e96dd5795a348c) as an example.
 
 #### Bootstrap Initiative ####
 
