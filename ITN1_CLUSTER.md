@@ -975,6 +975,7 @@ It should return the following (besides any other cronjob you had already set up
 0 */1 * * * /root/itn1_helpers/itn1_blocksbackup
 15 19 * * * /root/itn1_helpers/itn1_sendslots
 ```
+
 These are the resulting ```crontab``` added lines from the above ```itn1_prepare``` command. The last job (to send the slots to Pooltool) assumes your server time to be ```UTC``` time (**like the Cardano ITN1 network does**).
 
 ### itn1-helpers ###
@@ -1522,9 +1523,11 @@ systemctl restart nginx.service
 
 It's time to tell Grafana to use Prometheus. Connect to Grafana by browsing to ```https://grafana.example.com```. Login with the default credentials (user: ```admin```, password: ```admin```). Upon a successful login, you will be asked to create a new password for the admin user.
 
-Now browse to ```https://grafana.example.com/datasources```, and search and install the Prometheus datasource. Make it default data source as well. If you need help, refer to the [official documentation](https://grafana.com/docs/grafana/latest/features/datasources/prometheus/#adding-the-data-source).
+Now browse to ```https://grafana.example.com/datasources```, and search and install the Prometheus datasource. If you need help, refer to the [official documentation](https://grafana.com/docs/grafana/latest/features/datasources/prometheus/#adding-the-data-source). **Make it the default data source, and add the localhost information as well.**
 
 ![datasource](images/datasource.png)
+
+![editprometheus](images/promedit.jpg)
 
 #### Installing Dashboards ####
 
@@ -1537,7 +1540,7 @@ No need to reinvent the wheel here, please follow the official documentation if 
 
 **IMPORTANT: give Prometheus and the two exporters some time to collect data and generate metrics. Don't panic if your Grafana dashboards will be empty at first. As long as the are no errors.**
 
-Here's Insalada dahsborads examples:
+Here's Insalada dashboards examples:
 
 ![node exporter](images/node-grafana.png)
 
