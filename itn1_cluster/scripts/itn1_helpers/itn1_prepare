@@ -68,7 +68,7 @@ function createPoolUser() {
 function softwareInstall() {
     preFlight
     apt update && apt upgrade -y
-    apt install -y bc cbm ccze chrony curl dateutils dnsutils fail2ban git git-man htop jq lshw manpages most musl net-tools ripgrep speedtest-cli sudo sysstat tcptraceroute telnet tmux tmux-plugin-manager tmuxinator vim vim-common vim-runtime vim-tiny vnstat wget
+    apt install -y bc cbm ccze chrony curl dateutils dnsutils fail2ban git git-man htop jq lshw manpages most musl net-tools ripgrep speedtest-cli sudo sysstat tcptraceroute telnet tmux tmux-plugin-manager tmuxinator tree vim vim-common vim-runtime vim-tiny vnstat wget
     apt -t buster-backports install firewalld nftables
     curl -s http://www.vdberg.org/~richard/tcpping -o /usr/local/bin/tcpping
     chmod +x /usr/local/bin/tcpping
@@ -96,9 +96,9 @@ LOGS
         firewall-cmd --permanent --zone=public --add-port="$port"/tcp
     done
 
-    echo -e "\\nReloading firewall"
+    echo "Reloading firewall"
     firewall-cmd --complete-reload
-    echo -e "\\nThese are your new firewall rules:"
+    echo "These are your new firewall rules:"
     firewall-cmd --list-all
 }
 
@@ -313,12 +313,14 @@ TIMER
 Systemd files created:
   - /etc/systemd/system/itn1_cluster@.service
   - /etc/systemd/system/itn1_cluster.target
-  - /etc/systemd/system/itn1_failover.service (more on this later)
-  - /etc/systemd/system/itn1_failover.timer (more on this later)
+  - /etc/systemd/system/itn1_failover.service (more on this later in the guide)
+  - /etc/systemd/system/itn1_failover.timer (more on this later in the guide)
 EOF
 
     ## reload systemd
     systemctl daemon-reload
+    systemctl enable itn1_cluster.target
+    systemctl restart itn1_cluster.target
 }
 
 function setLogging() {
@@ -352,6 +354,27 @@ EOF
     ## reload the necessary services
     systemctl restart rsyslog.service
     systemctl restart logrotate.service
+}
+
+## copy the scripts over to root and set root's crontab
+function setScripts() {
+    ## let's copy the scripts into place
+    \cp -af /root/itn1_cluster_repo/itn1_cluster/scripts/* /root/
+
+    ## set crontab
+    cronfile=$(mktemp)
+    cat <<CRON >"$cronfile"
+## itn1_cluster cronjobs
+* * * * * /root/itn1_helpers/itn1_sendmytip
+* * * * * /root/itn1_helpers/itn1_failover
+*/3 * * * * /root/itn1_helpers/itn1_synccache
+*/5 * * * * /root/itn1_helpers/itn1_stuckrestart
+0 */1 * * * /root/itn1_helpers/itn1_blocksbackup
+15 19 * * * /root/itn1_helpers/itn1_sendslots
+CRON
+
+    crontab -l -u root | cat - "$cronfile" | crontab -u root -
+    rm -f "$cronfile"
 }
 
 ## set up the monitor.py scripts and systemd files
@@ -582,6 +605,11 @@ Wants=${itn1_monitor[@]}
 [Install]
 WantedBy=multi-user.target
 TARGET
+
+    ## reload systemd
+    systemctl daemon-reload
+    systemctl enable itn1_monitor.target
+    systemctl restart itn1_monitor.target
 }
 
 ## setup the prometheus config
@@ -621,27 +649,13 @@ PROM
 
 NODE
     done
-}
 
-## copy the scripts over to root and set root's crontab
-function setScripts() {
-    ## let's copy the scripts into place
-    \cp -af /root/itn1_cluster_repo/itn1_cluster/scripts/* /root/
-
-    ## set crontab
-    cronfile=$(mktemp)
-    cat <<CRON >"$cronfile"
-## itn1_cluster cronjobs
-* * * * * /root/itn1_helpers/itn1_sendmytip
-* * * * * /root/itn1_helpers/itn1_failover
-*/3 * * * * /root/itn1_helpers/itn1_synccache
-*/5 * * * * /root/itn1_helpers/itn1_stuckrestart
-0 */1 * * * /root/itn1_helpers/itn1_blocksbackup
-15 19 * * * /root/itn1_helpers/itn1_sendslots
-CRON
-
-    crontab -l -u root | cat - "$cronfile" | crontab -u root -
-    rm -f "$cronfile"
+    ## reload systemd
+    systemctl daemon-reload
+    systemctl enable prometheus.service
+    systemctl enable prometheus-node-exporter.service
+    systemctl restart prometheus.service
+    systemctl restart prometheus-node-exporter.service
 }
 
 # the --help command -- show the usage text
@@ -694,16 +708,16 @@ while true; do
         setLogging
         exit 0
         ;;
+    --set-scripts)
+        setScripts
+        exit 0
+        ;;
     --set-monitorpy)
         setMonitorPy
         exit 0
         ;;
     --set-prometheus)
         setPrometheus
-        exit 0
-        ;;
-    --set-scripts)
-        setScripts
         exit 0
         ;;
     *)
