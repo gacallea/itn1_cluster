@@ -57,6 +57,7 @@
       - [available commands](#available-commands)
     - [Contribution](#contribution)
     - [Scripts License](#scripts-license)
+    - [Upgrading Scripts](#upgrading-scripts)
   - [Monitor Your System](#monitor-your-system)
     - [Install Monitoring](#install-monitoring)
     - [Prometheus](#prometheus)
@@ -273,6 +274,14 @@ JCLI="$(command -v jcli 2>/dev/null)"
 
 JORM="$(command -v jormungandr 2>/dev/null)"
 [ -z "$JCLI" ] && JCLI="/usr/local/bin/jormungandr"
+```
+
+**IMPORTANT: make a backup of your newly modified ```itn1_config``` somewhere safe, if you don't want to accidentally overwrite it or lose your changes.**
+
+For example:
+
+```text
+cp /root/itn1_cluster_repo/itn1_cluster/scripts/itn1_config /root/itn1_config_backup
 ```
 
 ### change directory ###
@@ -1183,6 +1192,34 @@ If you have suggestions on how to improve these scripts, please [file an issue](
 ### Scripts License ###
 
 Both ```itn1_cluster``` and the ```itn1_helpers``` scripts are licensed under the terms of the [GPLv3](itn1_cluster/LICENSE) license.
+
+### Upgrading Scripts ###
+
+Both this guide and the scripts are constantly improved and updated for fixes. To upgrade the scripts to the latest version you need to run, in order, a few steps. Note: removing the repository and cloning it again is necessary because you have modified ```itn1_config``` during the guide instructions. Of course, if you are comfortable with ```git```, you can revert the changes and pull. For everyone else, these steps are necessary.
+
+Remove the old repository first:
+
+```text
+rm -rf /root/itn1_cluster_repo
+```
+
+Clone again:
+
+```text
+git clone https://github.com/gacallea/itn1_cluster.git /root/itn1_cluster_repo
+```
+
+Change directory to:
+
+```text
+cd /root/itn1_cluster_repo/itn1_cluster/scripts/
+```
+
+Lastly, copy the scripts over to your ```/root/``` directory (backslash included):
+
+```text
+\cp -af itn1_cluster itn1_funcs itn1_helpers /root/
+```
 
 ## Monitor Your System ##
 
