@@ -1227,7 +1227,7 @@ Monitoring is indispensable for any given service. Monitoring, in layman's terms
 
 In this section you will configure and automate Prometheus and Grafana *to be there for you*. In a future revision of this guide, you will configure alerting to send you messages or emails, to let you know about issues when they happen. With alerting, if you don't receive any alerts, "*no news is good news*". If you do receive them, it's time connect and troubleshoot the issues.
 
-**IMPORTANT: this guide assumes a remote server with a working domain. [DNS](https://en.wikipedia.org/wiki/Domain_Name_System) needs to be configured to access you monitoring, remotely.**
+**IMPORTANT: this guide assumes a remote server with a working domain. [DNS](https://en.wikipedia.org/wiki/Domain_Name_System) needs to be configured to access your monitoring, remotely.**
 
 ### Install Monitoring ###
 
@@ -1370,7 +1370,7 @@ Alerting with Prometheus will be implemented in a future revision of this guide.
 
 ### Grafana ###
 
-Grafana is a graphing software that provides dashboards that give you a complete view of what's going on with your server and with your pool. It can show backward history, as long there is data to graph on. This is you main point of entry to monitoring. Grafana can talk to a number of data sources that *feed data to it*. You are using and have configured Prometheus to be our source of data, now it's time to bring it all together.
+Grafana is a graphing software that provides dashboards that give you a complete view of what's going on with your server and with your pool. It can show backward history, as long there is data to graph on. This is your main point of entry to monitoring. Grafana can talk to a number of data sources that *feed data to it*. You are using and have configured Prometheus to be our source of data, now it's time to bring it all together.
 
 #### Grafana Configuration ####
 
