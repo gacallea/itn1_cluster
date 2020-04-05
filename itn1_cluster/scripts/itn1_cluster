@@ -91,7 +91,8 @@ while true; do
         exit 0
         ;;
     --swap-leader)
-        itn1SwapLeader
+        shift
+        itn1SwapLeader "$1" "$2"
         exit 0
         ;;
     --account-balance)
