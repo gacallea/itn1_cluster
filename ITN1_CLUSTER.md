@@ -1360,16 +1360,9 @@ scrape_configs:
       - targets: ['localhost:9103']
 ```
 
-That's all its needed for Prometheus to be collecting data from the Node and Jormungandr exporters, and to generate metrics that will be later fed to Grafana. Make sure to enable the services and start them as well:
+That's all its needed for Prometheus to be collecting data from the Node and Jormungandr exporters, and to generate metrics that will be later fed to Grafana.
 
-```text
-systemctl enable prometheus.service
-systemctl enable prometheus-node-exporter.service
-systemctl enable itn1_monitor.target
-systemctl restart prometheus.service
-systemctl restart prometheus-node-exporter.service
-systemctl restart itn1_monitor.target
-```
+**IMPORTANT: give Prometheus and the two exporters some time to collect data and generate metrics. Don't panic if your Grafana dashboards will be empty at first. As long as the are no errors.**
 
 #### Prometheus Alerting ####
 
@@ -1541,6 +1534,8 @@ Once your datasource is set, install the following dashboards to make use of Nod
 - Jormungandr Dashboard: [gacallea/itn1_cluster/blob/master/files/jormungandr-monitor.json](https://github.com/gacallea/itn1_cluster/blob/master/files/jormungandr-monitor.json)
 
 No need to reinvent the wheel here, please follow the official documentation if you need guidance: [Grafana Export/Import](https://grafana.com/docs/grafana/latest/reference/export_import/#importing-a-dashboard).
+
+**IMPORTANT: give Prometheus and the two exporters some time to collect data and generate metrics. Don't panic if your Grafana dashboards will be empty at first. As long as the are no errors.**
 
 Here's Insalada dahsborads examples:
 
