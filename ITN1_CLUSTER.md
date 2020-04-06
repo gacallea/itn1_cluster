@@ -803,7 +803,7 @@ bootstrap_from_trusted_peers: false
 
 #### Layers & Preferred List ####
 
-**IMPORTANT: this guide setup doesn't take into account the features introduced with [the 0.8.17 release](https://github.com/input-output-hk/jormungandr/releases/tag/v0.8.17). It would be impossible to know which [Layers and Preferred List](https://input-output-hk.github.io/jormungandr/configuration/network.html#layers) one would want to use, if at all. However, the above configured cluster has been tested and it will work just fine without those settings. Feel free to add your own favorite peers to the preferred list, to ALL of the generated itn1_nodeX_config.yaml files.**
+**IMPORTANT: this guide setup doesn't take into account the features introduced with [the 0.8.17 release](https://github.com/input-output-hk/jormungandr/releases/tag/v0.8.17). It would be impossible to know which [Layers and Preferred List](https://input-output-hk.github.io/jormungandr/configuration/network.html#layers) one would want to use, if at all. However, the above configured cluster has been tested and it will work just fine without those settings. Feel free to add your own favorite peers to the preferred list, to ALL of the generated ```itn1_node_X_config.yaml``` files.**
 
 ### configure systemd ###
 
