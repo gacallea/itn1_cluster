@@ -1527,7 +1527,7 @@ Now browse to ```https://grafana.example.com/datasources```, and search and inst
 
 ![datasource](images/datasource.png)
 
-![editprometheus](images/promedit.jpg)
+![editprometheus](images/promedit.png)
 
 #### Installing Dashboards ####
 
