@@ -130,7 +130,7 @@ Updates are implemented only after they have been tested on my pool. Sections ar
 
 ### Contributions ###
 
-**If you have comments, issues, changes, and suggestions, please [file an issue](https://github.com/gacallea/itn1_cluster/issues) on Github**. Any insight is valuable and will be considered for integration and improvements. If these resources help you in any way, consider [buying me a beer](https://seiza.com/blockchain/address/Ae2tdPwUPEZ65aHRG92UQDyMqNoACXLc7ykRhET4sszVWqZdNobN87E1tTQ).
+**If you have comments, issues, changes, and suggestions, please [file an issue](https://github.com/gacallea/itn1_cluster/issues) on Github**. Any insight is valuable and will be considered for integration and improvements. If these resources help you in any way, consider [buying me a beer](https://seiza.com/blockchain/address/Ae2tdPwUPEZHwvuNhu7qGeBcZBTQAwL2SUA49T6CubbQzoxgxyffYJ8VvcW).
 
 ### License ###
 
