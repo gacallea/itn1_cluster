@@ -591,7 +591,7 @@ While ```fail2ban``` doesn't offer perfect security - [*security is a process, n
 However, since this guide use ```firewalld```, ```fail2ban``` has to use that too. Copy the provided ```jail.conf``` file:
 
 ```text
-cp /root/itn1_cluster_repo/itn1_cluster/files/jail.local /etc/fail2ban/jail.local
+cp /root/itn1_cluster_repo/files/jail.local /etc/fail2ban/jail.local
 ```
 
 Edit ```/etc/fail2ban/jail.local``` to add your IP address to the existing ```ignoreip``` entry:
