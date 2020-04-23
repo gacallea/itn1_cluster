@@ -1012,7 +1012,7 @@ Depending on how frequently you want to run ```itn1_faiover``` you have two **mu
 
 #### itn1-blocksbackup ####
 
-Having to restart your node is a nuisance. Although since the 0.8.12 ```jormungandr``` release bottstrapping got incredibly fast, and a *bootstrap block* is now provided, to have a safety net is always a good idea. Backing up your ```blocks.sqlite``` with ```itn1_blocksbackup``` at a regular interval, via cron, can offer a safety net from where to recover in case of need.
+Having to restart your node is a nuisance. Although since the 0.8.12 ```jormungandr``` release bootstrapping got incredibly fast, and a *bootstrap block* is now provided, to have a safety net is always a good idea. Backing up your ```blocks.sqlite``` with ```itn1_blocksbackup``` at a regular interval, via cron, can offer a safety net from where to recover in case of need.
 
 The script has a data retention of 24h, and it removes older backups automatically. You won't need anything older than a day. **Just be mindful of your disk space when setting this up**. At the time of this writing, bzipped ```blocks.sqlite``` files backup take around **100MB** each. So if you backup every hour, 100MB times the number of files (24), **constantly takes 2.4GB** of your disk space.
 
