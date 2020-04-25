@@ -30,7 +30,7 @@ SIGN_KEY=""
 
 ## private keygen
 if ! [ -f "$PRIVATE_KEY_FILE" ]; then
-   grep sig_key "$ITN1_SECRET_FILE" | awk '{print $2}' > "$PRIVATE_KEY_FILE"
+   grep sig_key "$ITN1_MAIN_DIR"/itn1_node_1/itn1_node_1_secret.yaml | awk '{print $2}' > "$PRIVATE_KEY_FILE"
 fi
 
 ## choose the node to query for variables depending on height
@@ -94,3 +94,4 @@ echo "Request  : $JSON"
 echo "Response : $RESPONSE"
 
 exit 0
+
