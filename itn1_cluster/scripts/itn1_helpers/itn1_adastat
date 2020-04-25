@@ -3,7 +3,7 @@
 ## source: https://github.com/gacallea/itn1_cluster
 ## put the script in '/root/itn1_helpers/itn1_adastat'
 ## put this in root's crontab (crontab -e):
-## 16 19 * * * /root/itn1_helpers/itn1_adastats
+## 16 19 * * * /root/itn1_helpers/itn1_adastat
 
 ## source the custom variables
 . /root/itn1_config
