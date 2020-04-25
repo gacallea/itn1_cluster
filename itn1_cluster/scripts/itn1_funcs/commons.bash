@@ -41,3 +41,19 @@ function notAtALL() {
         exit 128
     fi
 }
+
+## time and date calculations, used internally by the script
+function intDateFunc() {
+    ## getting a constant from jcli is taxing for the REST API....
+    #chainstartdate=$($JCLI rest v0 settings get -h "$ITN1_RESTAPI_URL" | awk '/block0Time/ {print $2}' | tr -d '"' | xargs -I{} date "+%s" -d {})
+    ## .... better to just shove it in a variables if it changes..
+    chainstartdate=1576264417
+    elapsed=$((($(date +%s) - chainstartdate)))
+    epoch=$(((elapsed / 86400)))
+    slot=$(((elapsed % 86400) / 2))
+    nowBlockDate="$epoch.$slot"
+    nextepoch="$((($(date +%s) + (86400 - (elapsed % 86400)))))"
+    nextepochToDate="$(date --iso-8601=s -d@+$nextepoch)"
+    dateNow="$(date --iso-8601=s)"
+    ### currently not possible to calculate nowBlockHeight=""
+}
