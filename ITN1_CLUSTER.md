@@ -48,6 +48,7 @@
       - [itn1-synccache](#itn1-synccache)
       - [itn1-sendmytip](#itn1-sendmytip)
       - [itn1-sendslots](#itn1-sendslots)
+      - [itn1-adastat](#itn1-adastat)
     - [itn1-cluster](#itn1-cluster-1)
       - [Quick Examples](#quick-examples)
         - [logs](#logs)
@@ -88,7 +89,7 @@
       - [Pool Tool](#pool-tool)
       - [Bootstrap Initiative](#bootstrap-initiative)
       - [Organic Design](#organic-design)
-      - [ADA Stat](#ada-stat)
+      - [ADAStat](#adastat)
       - [ADAtainement](#adatainement)
       - [Adapools](#adapools)
       - [Pegasus App](#pegasus-app)
@@ -161,6 +162,7 @@ The following scripts are provided to take care of the pool installation, config
 - ```itn1_synccache```: will force a cache sync and dump, if conditions are met.
 - ```itn1_sendmytip```: will send your pool tip to [Pooltool](https://pooltool.io/) from the highest node only.
 - ```itn1_sendslots```: will send the allocated slots to [Pooltool](https://pooltool.io/) from the highest node only.
+- ```itn1_adastat```:  will send the allocated slots to [ADAStat](https://adastat.net/) from the highest node only.
 - ```itn1_cluster```: **once your pool is set and running, this will be your Swiss Army Knife**.
 
 ### itn1 prepare ###
@@ -902,7 +904,7 @@ systemctl stop itn1_cluster.target
 systemctl restart itn1_cluster.target
 ```
 
-If the above it's a lot to process, don't worry. The ```itn1_cluster``` script is here to help you. **More on scripts later.**
+If the above it's a lot to process, don't worry. The ```itn1_cluster``` script is here to help you and provides easy to use equivalent commands. **More on the ITN1 family of scripts later.**
 
 ### configure logging ###
 
@@ -979,6 +981,7 @@ It should return the following (besides any other cronjob you had already set up
 */5 * * * * /root/itn1_helpers/itn1_stuckrestart
 0 */1 * * * /root/itn1_helpers/itn1_blocksbackup
 15 19 * * * /root/itn1_helpers/itn1_sendslots
+16 19 * * * /root/itn1_helpers/itn1_adastat
 ```
 
 These are the resulting ```crontab``` added lines from the above ```itn1_prepare``` command. The last job (to send the slots to Pooltool) assumes your server time to be ```UTC``` time (**like the Cardano ITN1 network does**).
@@ -993,6 +996,7 @@ The ```itn1_helpers``` directory is comprised of a number of scripts that take c
 - ```itn1_synccache```: will force a cache sync and dump, if conditions are met.
 - ```itn1_sendmytip```: will send your pool tip to [Pooltool](https://pooltool.io/) from the highest node only.
 - ```itn1_sendslots```: will send the allocated slots to [Pooltool](https://pooltool.io/) from the highest node only.
+- ```itn1_adastat```:  will send the allocated slots to [ADAStat](https://adastat.net/) from the highest node only.
 
 #### itn1-failover ####
 
@@ -1035,6 +1039,10 @@ Essentially, ```itn1_sendmytip``` sends your pool tip statistics every minute to
 **IMPORTANT: this requires a Pooltool account and user ID. Make sure you configure [itn1 config](#itn1-config) as well.**
 
 This amazing feature was created by Michael at [VIBE](https://pooltool.io/pool/ad67bc523e646aa4acce69c921d47092cb89461f2c6f1252fe6576c280aaa6a8/), and it will provide your scheduled and minted blocks count to Pooltool, for statistics and the 100% stars we all love to obtain each epoch. The original version work with a single node/instance. The hereby provided version, was adapted to work with ```ITN1 Cluster```, and it's kept up to date.
+
+#### itn1-adastat ####
+
+This is the equivalent of ```itn1_sendslots``` above, but for the elegant and minimalist [ADAStat](https://adastat.net/). Visit their site if you don't know about it. Highly recommended.
 
 ### itn1-cluster ###
 
@@ -1201,7 +1209,7 @@ Both ```itn1_cluster``` and the ```itn1_helpers``` scripts are licensed under th
 
 ### Upgrading Scripts ###
 
-Both this guide and the scripts are constantly improved and updated for fixes. To upgrade the scripts to the latest version you need to run, in order, a few steps. Note: removing the repository and cloning it again is necessary because you have modified ```itn1_config``` during the guide instructions. Of course, if you are comfortable with ```git```, you can revert the changes and pull. For everyone else, these steps are necessary.
+Both this guide and the scripts are constantly improved and updated for fixes. To upgrade the scripts to the latest version you need to run, in order, a few steps. Note: removing the repository and cloning it again is necessary because you have modified ```itn1_config``` during the guide instructions. Of course, **if you are comfortable with ```git```, you can revert the changes and pull**. For everyone else, these steps are necessary.
 
 Remove the old repository first:
 
@@ -1619,9 +1627,9 @@ Join us, and make sure to read the pinned message for all of the nitty gritty de
 
 Organic Design has a great deal of useful information on [Cardano](https://organicdesign.nz/Cardano), [Staking Pool FAQ](https://organicdesign.nz/Cardano_staking_pool_FAQ), and [Cardano terminology](https://organicdesign.nz/Cardano#Staking_in_Cardano). Familiarize with these, and your pool operator journey will improve a lot.
 
-#### ADA Stat ####
+#### ADAStat ####
 
-[ADA Stat](https://adastat.net/en) offers a minimalistic and elegant approach to stats for the explorer and pools. It is accurate and a pleasure to use and look at. Here's INSL as an example: [Insalada Stake Pool](https://adastat.net/en/pool/93756c507946c4d33d582a2182e6776918233fd622193d4875e96dd5795a348c) statistics.
+[ADAStat](https://adastat.net/en) offers a minimalistic and elegant approach to stats for the explorer and pools. It is accurate and a pleasure to use and look at. Here's INSL as an example: [Insalada Stake Pool](https://adastat.net/en/pool/93756c507946c4d33d582a2182e6776918233fd622193d4875e96dd5795a348c) statistics.
 
 #### ADAtainement ####
 

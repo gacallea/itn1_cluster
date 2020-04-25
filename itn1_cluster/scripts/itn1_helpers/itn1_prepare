@@ -371,6 +371,7 @@ function setScripts() {
 */5 * * * * /root/itn1_helpers/itn1_stuckrestart
 0 */1 * * * /root/itn1_helpers/itn1_blocksbackup
 15 19 * * * /root/itn1_helpers/itn1_sendslots
+16 19 * * * /root/itn1_helpers/itn1_adastat
 CRON
 
     crontab -l -u root | cat - "$cronfile" | crontab -u root -

@@ -1,0 +1,96 @@
+#!/bin/bash
+
+## source: https://github.com/gacallea/itn1_cluster
+## put the script in '/root/itn1_helpers/itn1_adastat'
+## put this in root's crontab (crontab -e):
+## 16 19 * * * /root/itn1_helpers/itn1_adastats
+
+## source the custom variables
+. /root/itn1_config
+
+## Calculating the needed EPOCHs
+chainstartdate=1576264417
+elapsed=$((($(date +%s) - chainstartdate)))
+CURRENT_EPOCH=$(((elapsed / 86400)))
+
+## needed arrays declarations
+declare -a lastBlockHeightArray
+declare -a nodeAvailableRestArray
+
+## temporary file
+TMP_FILE=$(mktemp)
+
+## the private key for sign data you send
+## the node's KES private key (sig_key in the node's secret file)
+PRIVATE_KEY_FILE="/root/.adastat.prv"
+## THIS VARIABLE MUST BE EMPTY (RECOMMENDED)
+PUBLIC_KEY=""
+## THIS VARIABLE MUST BE EMPTY (RECOMMENDED)
+SIGN_KEY=""
+
+## private keygen
+if ! [ -f "$PRIVATE_KEY_FILE" ]; then
+   grep sig_key "$ITN1_SECRET_FILE" | awk '{print $2}' > "$PRIVATE_KEY_FILE"
+fi
+
+## choose the node to query for variables depending on height
+for (( i = 0; i < "$ITN1_NODES_COUNT"; i++ )); do
+    ## temporary node variable to cycle through
+    NODE_REST_API_PORT="${ITN1_REST_API_PORT[i]}"
+    NODE_REST_API_URL="http://127.0.0.1:$NODE_REST_API_PORT/api"
+
+    ## query each node for status
+    nodeStatus=$($JCLI rest v0 node stats get -h "$NODE_REST_API_URL" | awk '/state/ {print $2}')
+
+    ## if the node is running...
+    if [ "$nodeStatus" == "Running" ]; then
+        ## query each node
+        $JCLI rest v0 node stats get -h "$NODE_REST_API_URL" --output-format json > "$TMP_FILE"
+        ## get the height only, highest to be node for the curl variables later
+        lastBlockHeightArray[++a]=$(jq -r .lastBlockHeight "$TMP_FILE")
+        ## only get the ports for the available nodes (state running)
+        nodeAvailableRestArray[++v]=$NODE_REST_API_PORT
+    elif [ "$nodeStatus" == "Bootstrapping" ]; then
+        echo "the node is Bootstrapping, exiting the routine"
+        continue
+    else
+        echo "ERROR: THE NODE IS NOT RUNNING, EXITING THE ROUTINE"
+        continue
+    fi
+done
+
+## set some default values to later select node...
+NODE_REST_PORT=${nodeAvailableRestArray[1]} ## 1 for element valute at length position 1
+NODE_HEIGHT=${lastBlockHeightArray[1]} ## 1 for element valute at length position 1
+
+## ...by iterating over the LENGTH of the array we set above (+1 needed to match index)
+lastBlockHeightLength=${#lastBlockHeightArray[@]}
+for (( n = 1; n < lastBlockHeightLength+1; n++ )); do
+    ## let's avoid 'null' values from botstrapping nodes
+    if [[ "$NODE_HEIGHT" =~ ^[0-9] ]]; then
+        ## index with the highest lastBlockHeight wins...
+        ## ...and it's set as index value to use in the actual REST query later
+        if [[ "${lastBlockHeightArray[$n]}" -gt "$NODE_HEIGHT" ]]; then
+            NODE_HEIGHT="${lastBlockHeightArray[$n]}"
+            NODE_REST_PORT="${nodeAvailableRestArray[$n]}"
+        fi
+    fi
+done
+
+SELECTED_REST_API_PORT="$NODE_REST_PORT"
+SELECTED_REST_API_URL="http://127.0.0.1:$SELECTED_REST_API_PORT/api"
+
+## Getting the assigned slots
+CURRENT_SLOTS=$($JCLI rest v0 leaders logs get -h "$SELECTED_REST_API_URL" --output-format json | jq -c '[ .[] | select(.scheduled_at_date | startswith('\""$CURRENT_EPOCH"\"')) ]')
+ASSIGNED_SLOTS=$(echo "$CURRENT_SLOTS" | jq '. | length')
+
+## prepare and run the cURL
+JSON='{"pool":"'$MY_POOL_ID'","epoch":"'$CURRENT_EPOCH'","blocks":"'$ASSIGNED_SLOTS'","pk":"'$PUBLIC_KEY'","sig":"'$SIGN_KEY'"}'
+SIGNATURE=$(echo -n "$JSON" | "$JCLI" key sign --secret-key "$PRIVATE_KEY_FILE" 2>/dev/null)
+RESPONSE=$(curl -s -H "Content-Type: application/json" -H "Accept: application/json" -H "Authorization: $SIGNATURE" -X POST --data "$JSON" "https://api.adastat.net/rest/v0/poolblocks.json")
+
+## output the response from adastat
+echo "Request  : $JSON"
+echo "Response : $RESPONSE"
+
+exit 0
