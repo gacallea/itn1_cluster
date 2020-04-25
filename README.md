@@ -2,7 +2,7 @@ Hereby you find my second humble contribution to the [Cardano](https://www.carda
 
 **IMPORTANT**: the guide and the scripts are written for the current Cardano node architecture, and will be updated and adapted to the newly announced [Haskell version](https://iohk.io/en/blog/posts/2020/02/12/new-cardano-node-explorer-backend-and-web-api-released/), as soon as our pool will have migrated to it and tested.
 
-**IMPORTANT**: check back **often** for updates for both the scripts and the guide, as they are constantly improved and updated.
+**IMPORTANT**: the guide and scripts have been proof-read and are now feature complete, as of tag 1.0. Check back for minor typos and updates. No new features will be added until the Haskell version. Bugs pointed out in Github issues will be fixed.
 
 ## Guide ##
 
