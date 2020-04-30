@@ -27,10 +27,10 @@
   - [Configure Your System](#configure-your-system)
     - [configure backend](#configure-backend)
     - [configure firewalld](#configure-firewalld)
+      - [reboot](#reboot)
       - [sshd port](#sshd-port)
       - [itn1 cluster ports](#itn1-cluster-ports)
       - [make sure](#make-sure)
-      - [reboot](#reboot)
       - [confirm](#confirm)
     - [configure sshd](#configure-sshd)
     - [configure fail2ban](#configure-fail2ban)
@@ -462,12 +462,19 @@ FirewallBackend=nftables
 LogDenied=all
 ```
 
-#### sshd port ####
+#### reboot ####
 
-It is now time to decide the port for your ```sshd``` server. This guide will bind ```sshd``` to ```5269``` as an example, and to provide a default settings that you may want to keep. **Since you haven't configured ```sshd``` yet, make sure to add it to the enabled services!** Once you custom ```ssh``` port (hereby ```5269```) is configured in the ```sshd_config``` file and ```sshd``` restarted, you will remove the default ```ssh``` port (```22```) from the ```firewalld``` rules.
+To ditch ```iptables``` and switch to ```nftables``` completely, you need to ```reboot``` the server. **If ```sshd``` still runs on port ```22``` as this guide assumes, you'll be fine.**
 
 ```text
-firewall-cmd --permanent --zone=public --add-service=ssh
+reboot
+```
+
+#### sshd port ####
+
+Once your server has rebooted, ssh back in. It is now time to decide the port for your ```sshd``` server. This guide will bind ```sshd``` to ```5269``` as an example, and to provide a default settings that you may want to keep. Once you custom ```ssh``` port (hereby ```5269```) is configured in the ```sshd_config``` file and ```sshd``` restarted, you will remove the default ```ssh``` port (```22```) from the ```firewalld``` rules.
+
+```text
 firewall-cmd --permanent --zone=public --add-port=5269/tcp
 ```
 
@@ -507,20 +514,25 @@ public
   rich rules:
 ```
 
-#### reboot ####
-
-To ditch ```iptables``` and switch to ```nftables``` completely, you need to ```reboot``` the server. **If ```sshd``` still runs on port ```22``` as this guide assumes, you'll be fine.**
-
-```text
-reboot
-```
-
 #### confirm ####
 
-ssh back in and confirm that every rule is still in place for your ```public``` zone, before you continue with ```ssh``` configuration:
+You should have an empty ```iptables``` ruleset. Run the following:
 
 ```text
-firewall-cmd --list-all
+iptables -nL
+```
+
+The above should return:
+
+```text
+Chain INPUT (policy ACCEPT)
+target     prot opt source               destination
+
+Chain FORWARD (policy ACCEPT)
+target     prot opt source               destination
+
+Chain OUTPUT (policy ACCEPT)
+target     prot opt source               destination
 ```
 
 The following should return your new ```nftables``` rules:
