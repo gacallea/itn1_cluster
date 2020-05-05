@@ -426,8 +426,8 @@ Once you have enabled backports in your  ```/etc/apt/sources.list``` file, you c
 You should stick [to the latest stable release](https://github.com/input-output-hk/jormungandr/releases), unless it introduces regressions. The following works for the **current release** for a ```x86_64``` architecture (PC/Mac - Intel/AMD Server) and [GNU](https://www.gnu.org/) ```glibc```.
 
 ```text
-curl -sLOJ https://github.com/input-output-hk/jormungandr/releases/download/v0.8.18/jormungandr-v0.8.18-x86_64-unknown-linux-gnu-generic.tar.gz
-tar xzvf jormungandr-v0.8.18-x86_64-unknown-linux-gnu-generic.tar.gz
+curl -sLOJ https://github.com/input-output-hk/jormungandr/releases/download/v0.8.19/jormungandr-v0.8.19-x86_64-unknown-linux-gnu-generic.tar.gz
+tar xzvf jormungandr-v0.8.19-x86_64-unknown-linux-gnu-generic.tar.gz
 mv jcli /usr/local/bin/
 mv jormungandr /usr/local/bin/
 chmod +x /usr/local/bin/jcli
