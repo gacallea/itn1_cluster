@@ -18,7 +18,7 @@ ITN1_REST_API_PORT_Length=${#ITN1_REST_API_PORT[@]}
 function preFlight() {
     ## does the secret file exist
     if [ ! -f "$ITN1_SECRET_FILE" ]; then
-        echo -e "\\nError: the '$ITN1_SECRET_FILE' file is missing, copy your pool 'node-secret.yaml' to \"/root/itn1_cluster/files/node-secret.yaml\""
+        echo -e "\\nError: the '$ITN1_SECRET_FILE' file is missing, copy your pool 'node-secret.yaml' to \"/root/itn1_cluster_repo/itn1_cluster/files/node-secret.yaml\""
         exit 1
     fi
 
