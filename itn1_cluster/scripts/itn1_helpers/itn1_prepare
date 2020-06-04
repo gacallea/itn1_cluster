@@ -1,7 +1,7 @@
 #!/bin/bash
 
 ## source: https://github.com/gacallea/itn1_cluster
-## this script helps you set up your itn1_cluster while you follow the guide: https://github.com/gacallea/itn1_cluster/blob/master/ITN1_CLUSTER.md
+## this script helps you set up your itn1_cluster while you follow the guide: https://guides.insalada.io/#/ITN1_CLUSTER
 
 ## source the 'itn1_config' variables
 # shellcheck source=../itn1_config
@@ -31,7 +31,7 @@ function preFlight() {
         ## must be at least two nodes
         elif [[ "$ITN1_NODES_COUNT" -lt 2 ]]; then
             echo "you have entered a node count of less then 2, this script is to set up at least 2 nodes that can be promoted to leader."
-            echo "if you want to run a single node, follow this guide: https://github.com/gacallea/cardanoRelatedStuff/blob/master/NACG.md"
+            echo "if you want to run a single node, follow this guide: https://guides.insalada.io/#/NACG"
             exit 2
         fi
     ## please specify an argument
@@ -68,8 +68,7 @@ function createPoolUser() {
 function softwareInstall() {
     preFlight
     apt update && apt upgrade -y
-    apt install -y bc cbm ccze chrony curl dateutils dnsutils fail2ban git git-man htop jq lshw manpages most musl net-tools ripgrep speedtest-cli sudo sysstat tcptraceroute telnet tmux tmux-plugin-manager tmuxinator tree vim vim-common vim-runtime vim-tiny vnstat wget
-    apt -t buster-backports install firewalld nftables
+    apt install -y bc cbm ccze chrony curl dateutils dnsutils fail2ban git git-man htop jq lshw manpages most musl net-tools ripgrep speedtest-cli sysstat tcptraceroute telnet tmux tmux-plugin-manager tmuxinator tree vim vim-common vim-runtime vim-tiny vnstat wget
     curl -s http://www.vdberg.org/~richard/tcpping -o /usr/local/bin/tcpping
     chmod +x /usr/local/bin/tcpping
 
@@ -77,29 +76,12 @@ function softwareInstall() {
 }
 
 ## configure system
-function setFirewalld() {
+function setUfw() {
     preFlight
 
-    cat <<LOGS >/etc/logrotate.d/firewalld
-/var/log/firewalld {
-    daily
-    rotate 30
-    copytruncate
-    compress
-    delaycompress
-    notifempty
-    missingok
-}
-LOGS
-
     for port in "${ITN1_PUBLIC_PORT[@]}"; do
-        firewall-cmd --permanent --zone=public --add-port="$port"/tcp
+        ufw allow "$port"
     done
-
-    echo "Reloading firewall"
-    firewall-cmd --complete-reload
-    echo "These are your new firewall rules:"
-    firewall-cmd --list-all
 }
 
 ## all of the thingies happen here
@@ -663,7 +645,7 @@ NODE
 function usage() {
     cat <<USAGE
 
-    '$SCRIPTNAME' MUST BE USED IN CONJUNCTION WITH THE ITN1 CLUSTER GUIDE: https://github.com/gacallea/itn1_cluster/blob/master/ITN1_CLUSTER.md
+    '$SCRIPTNAME' MUST BE USED IN CONJUNCTION WITH THE ITN1 CLUSTER GUIDE: https://guides.insalada.io/#/ITN1_CLUSTER
 
     BEFORE YOU RUN '$SCRIPTNAME':
 
@@ -694,7 +676,7 @@ while true; do
         exit 0
         ;;
     --set-firewall)
-        setFirewalld
+        setUfw
         exit 0
         ;;
     --set-cluster)

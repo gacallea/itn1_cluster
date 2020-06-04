@@ -1,12 +1,10 @@
+# ITN1 Cluster #
+
 Hereby you find my second humble contribution to the [Cardano](https://www.cardano.org/en/home/) ecosystem. I hope that it can be helpful to you. Enjoy :)
 
-**IMPORTANT**: the guide and the scripts are written for the current Cardano node architecture, and will be updated and adapted to the newly announced [Haskell version](https://iohk.io/en/blog/posts/2020/02/12/new-cardano-node-explorer-backend-and-web-api-released/), as soon as our pool will have migrated to it and tested.
+## ITN1 Cluster Guide ##
 
-**IMPORTANT**: the guide and scripts have been proof-read and are now feature complete, as of tag 1.0. Check back for minor typos and updates. No new features will be added until the Haskell version. Bugs pointed out in Github issues will be fixed.
-
-## Guide ##
-
-The ```ITN1 Cluster``` guide helps you install and configure a Cardano ITN1 clustered Pool. It also introduces the script that will help you manage and automate it. [Read on](ITN1_CLUSTER.md) for detailed instructions.
+The ```ITN1 Cluster``` guide helps you install and configure a Cardano ITN1 clustered Pool with Ubuntu 20.04 LTS. It also introduces the script that will help you manage and automate it. You can find it [here](https://guides.insalada.io/#/ITN1_CLUSTER).
 
 ## License ##
 
