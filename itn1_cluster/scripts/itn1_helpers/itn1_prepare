@@ -88,7 +88,7 @@ function setUfw() {
 function setupCluster() {
     preFlight
 
-    ## temporary file to collect itn1_nodes address and public_id
+    ## temporary file to collect itn1_nodes address
     ## used to set them as trusted peers at a later stage
     tmpFile=$(mktemp -p .)
 
@@ -97,13 +97,10 @@ function setupCluster() {
 
     ## while node id is less or equal than node count
     while [[ "$ITN1_NODE_ID" -le "$ITN1_NODES_COUNT" ]]; do
-        ## generate a random public_id...
-        ## ITN1_PUBLIC_ID=$(openssl rand -hex 24)
         ## ...and collect it in the temp file
         cat <<PEERS >>"$tmpFile"
     - address: "/ip4/$ITN1_PUBLIC_IP_ADDR/tcp/${ITN1_PUBLIC_PORT[$ITN1_NODE_ID - 1]}"
 PEERS
-      ## id: $ITN1_PUBLIC_ID
         ## create the node directories structure, numbered
         ITN1_NODE_DIR="${ITN1_MAIN_DIR}/itn1_node_$ITN1_NODE_ID"
         if [[ ! -d "$ITN1_NODE_DIR" ]]; then
@@ -137,20 +134,22 @@ p2p:
   policy:
     quarantine_duration: 15m
   trusted_peers:
-    - address: "/ip4/91.121.100.32/tcp/3001" #SALAD 2
-    - address: "/ip4/91.121.100.32/tcp/3002" #SALAD 2
-    - address: "/ip4/91.121.100.32/tcp/3003" #SALAD 3
     - address: "/ip4/82.209.54.76/tcp/3000" #BLTNA
     - address: "/ip4/82.209.54.76/tcp/4000" #BLTNB
     - address: "/ip4/46.36.37.145/tcp/3000" #DOLCA
+    - address: "/ip4/45.153.186.205/tcp/3100" #MASTR
+    - address: "/ip4/45.153.186.205/tcp/3101" #MASTR
+    - address: "/ip4/92.223.88.41/tcp/3001" #CEMA1 1
+    - address: "/ip4/92.223.88.41/tcp/3002" #CEMA1 2
+    - address: "/ip4/92.223.88.41/tcp/3003" #CEMA1 3
+    - address: "/ip4/62.171.167.84/tcp/3300" #ADALO
+    - address: "/ip4/62.171.167.85/tcp/4300" #ADALO
+    - address: "/ip4/62.171.167.86/tcp/5300" #ADALO
+    - address: "/ip4/78.46.204.19/tcp/3000" #ADAGO
+    - address: "/ip4/35.225.175.215/tcp/3000" #UNION
 rest:
   listen: 127.0.0.1:${ITN1_REST_API_PORT[$ITN1_NODE_ID - 1]}
 storage: "$ITN1_STORAGE"
-mempool:
-    pool_max_entries: 10000
-    log_max_entries: 100000
-leadership:
-    logs_capacity: 4096
 http_fetch_block0_service:
 - "https://github.com/input-output-hk/jormungandr-block0/raw/master/data/"
 skip_bootstrap: false
