@@ -21,5 +21,3 @@ I also run the [**Insalada Stake Pool**](https://insalada.io/), and this is what
 ## Contributions ##
 
 If you have comments, changes, suggestions for the guide and/or the scripts, please [file an issue](https://github.com/gacallea/itn1_cluster/issues) on Github. Any insight is valuable and will be considered for integration and improvements.
-
-If these resources help you in any way, consider [buying me a beer](https://seiza.com/blockchain/address/Ae2tdPwUPEZHwvuNhu7qGeBcZBTQAwL2SUA49T6CubbQzoxgxyffYJ8VvcW). Delegating [to my pool](https://insalada.io/) would also be nice.
